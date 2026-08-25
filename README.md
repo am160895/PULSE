@@ -416,6 +416,17 @@ Editing locally and deploying to Railway (or Vercel) is exactly the normal git-p
 — nothing about this app requires editing in a hosted IDE. Local dev and production both talk
 to the same Supabase project unless you point `.env.local` at a second (e.g. staging) one.
 
+**Gotcha: fixing a `NEXT_PUBLIC_*` variable after a bad first deploy requires a real rebuild,
+not just a restart.** Next.js inlines every `NEXT_PUBLIC_*` variable as a literal at *build*
+time, everywhere it's referenced — including server-only code (`proxy.ts`, the Supabase
+client factories), not just client bundles. If a `NEXT_PUBLIC_*` value was wrong during the
+build that produced your current deployment, editing it in Railway/Vercel's dashboard and
+clicking "Redeploy" can silently reuse the previously built files with the old value still
+baked in — the dashboard will show the corrected value, the running app will keep using the
+old one, and the symptom looks identical to "the fix didn't take." Push a new commit (forces
+a genuine rebuild) rather than trusting a restart/redeploy alone whenever a `NEXT_PUBLIC_*`
+value changes after a bad first deploy.
+
 ## 22. Known limitations
 
 - **No real-time push** (Supabase Realtime, WebSockets) — the map/venue pages poll on an
