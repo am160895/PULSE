@@ -1,0 +1,510 @@
+import type {
+  PulseResult,
+  Venue,
+  VenueEvent,
+  VenueHourlyBaseline,
+  VenueHours,
+  VenueReport,
+  VenueSignalSnapshot,
+} from "@/types";
+import type { BoundingBox } from "@/lib/geo";
+import { isWithinBoundingBox } from "@/lib/geo";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { unwrap } from "@/lib/supabase/unwrap";
+
+// ---------------- row <-> domain mappers ----------------
+// Postgres is snake_case; every domain type in @/types is camelCase. Kept local to this
+// file (and social.ts's own copies for its tables) rather than shared, since each mapper is
+// only ever used against its one matching table shape.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>;
+
+function rowToHours(row: Row): VenueHours {
+  return {
+    id: row.id,
+    venueId: row.venue_id,
+    dayOfWeek: row.day_of_week,
+    // Postgres `time` serializes as "HH:MM:SS" — the app's own format is "HH:mm" throughout.
+    openTime: String(row.open_time).slice(0, 5),
+    closeTime: String(row.close_time).slice(0, 5),
+  };
+}
+
+function rowToVenue(row: Row): Venue {
+  return {
+    id: row.id,
+    externalPlaceId: row.external_place_id,
+    name: row.name,
+    slug: row.slug,
+    category: row.category,
+    subcategory: row.subcategory,
+    venueType: row.venue_type,
+    neighborhood: row.neighborhood,
+    streetAddress: row.street_address,
+    city: row.city,
+    state: row.state,
+    postalCode: row.postal_code,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    timezone: row.timezone,
+    website: row.website,
+    instagramHandle: row.instagram_handle,
+    capacityEstimate: row.capacity_estimate,
+    priceLevel: row.price_level,
+    musicType: row.music_type,
+    isActive: row.is_active,
+    hours: (row.venue_hours ?? []).map(rowToHours),
+    businessStatus: row.business_status,
+    externalRating: row.external_rating,
+    externalRatingCount: row.external_rating_count,
+    claimStatus: row.claim_status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function rowToEvent(row: Row): VenueEvent {
+  return {
+    id: row.id,
+    venueId: row.venue_id,
+    name: row.name,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    eventType: row.event_type,
+    source: row.source,
+    externalUrl: row.external_url,
+    createdAt: row.created_at,
+  };
+}
+
+function rowToReport(row: Row): VenueReport {
+  return {
+    id: row.id,
+    venueId: row.venue_id,
+    userId: row.user_id,
+    createdAt: row.created_at,
+    crowdLevel: row.crowd_level,
+    waitLevel: row.wait_level,
+    energyLevel: row.energy_level,
+    crowdNote: row.crowd_note,
+    reportSource: row.report_source,
+    isVerifiedNearby: row.is_verified_nearby,
+    trustWeightAtSubmission: row.trust_weight_at_submission,
+  };
+}
+
+function rowToBaseline(row: Row): VenueHourlyBaseline {
+  return {
+    id: row.id,
+    venueId: row.venue_id,
+    dayOfWeek: row.day_of_week,
+    hourOfDay: row.hour_of_day,
+    expectedActivityScore: row.expected_activity_score,
+    expectedWaitScore: row.expected_wait_score,
+    sampleCount: row.sample_count,
+    updatedAt: row.updated_at,
+  };
+}
+
+function rowToSnapshot(row: Row): VenueSignalSnapshot {
+  return {
+    id: row.id,
+    venueId: row.venue_id,
+    capturedAt: row.captured_at,
+    pulseScore: row.pulse_score,
+    confidenceScore: row.confidence_score,
+    crowdScore: row.crowd_score,
+    trendScore: row.trend_score,
+    reportScore: row.report_score,
+    historicalScore: row.historical_score,
+    eventScore: row.event_score,
+    friendActivityScore: row.friend_activity_score,
+    trendDirection: row.trend_direction,
+    waitEstimate:
+      row.wait_min_minutes == null ? null : { minMinutes: row.wait_min_minutes, maxMinutes: row.wait_max_minutes },
+    expectedPeak:
+      row.expected_peak_start == null ? null : { start: row.expected_peak_start, end: row.expected_peak_end },
+    signalVersion: row.signal_version,
+  };
+}
+
+const VENUE_SELECT = "*, venue_hours(*)";
+
+// ---------------- venues ----------------
+
+export async function listVenues(): Promise<Venue[]> {
+  const rows = unwrap(await supabaseAdmin().from("venues").select(VENUE_SELECT).eq("is_active", true));
+  return rows.map(rowToVenue);
+}
+
+export async function getVenueById(id: string): Promise<Venue | undefined> {
+  const row = unwrap(await supabaseAdmin().from("venues").select(VENUE_SELECT).eq("id", id).maybeSingle());
+  return row ? rowToVenue(row) : undefined;
+}
+
+export async function getVenueBySlug(slug: string): Promise<Venue | undefined> {
+  const row = unwrap(await supabaseAdmin().from("venues").select(VENUE_SELECT).eq("slug", slug).maybeSingle());
+  return row ? rowToVenue(row) : undefined;
+}
+
+// ---------------- venue admin CRUD ----------------
+// Callers (API routes) are responsible for the admin-role check — these functions enforce
+// nothing on their own, same convention as every other repository function in this file.
+
+/** Unlike listVenues(), includes inactive venues — an admin needs to see what they've turned off. */
+export async function listAllVenuesForAdmin(): Promise<Venue[]> {
+  const rows = unwrap(await supabaseAdmin().from("venues").select(VENUE_SELECT).order("name"));
+  return rows.map(rowToVenue);
+}
+
+export type NewVenueInput = Omit<
+  Venue,
+  "id" | "slug" | "hours" | "createdAt" | "updatedAt" | "externalPlaceId" | "businessStatus" | "externalRating" | "externalRatingCount" | "claimStatus"
+> & {
+  hours: Array<{ dayOfWeek: number; openTime: string; closeTime: string }>;
+};
+
+function slugifyVenueName(name: string, disambiguator: string): string {
+  return `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${disambiguator}`;
+}
+
+async function replaceHours(venueId: string, hours: Array<{ dayOfWeek: number; openTime: string; closeTime: string }>) {
+  unwrap(await supabaseAdmin().from("venue_hours").delete().eq("venue_id", venueId));
+  if (hours.length === 0) return;
+  unwrap(
+    await supabaseAdmin()
+      .from("venue_hours")
+      .insert(hours.map((h) => ({ venue_id: venueId, day_of_week: h.dayOfWeek, open_time: h.openTime, close_time: h.closeTime })))
+  );
+}
+
+export async function createVenueAdmin(fields: NewVenueInput): Promise<Venue> {
+  const { hours, ...rest } = fields;
+  const row = unwrap(
+    await supabaseAdmin()
+      .from("venues")
+      .insert({
+        name: rest.name,
+        slug: slugifyVenueName(rest.name, Math.random().toString(36).slice(2, 8)),
+        category: rest.category,
+        subcategory: rest.subcategory,
+        venue_type: rest.venueType,
+        neighborhood: rest.neighborhood,
+        street_address: rest.streetAddress,
+        city: rest.city,
+        state: rest.state,
+        postal_code: rest.postalCode,
+        latitude: rest.latitude,
+        longitude: rest.longitude,
+        timezone: rest.timezone,
+        website: rest.website,
+        instagram_handle: rest.instagramHandle,
+        capacity_estimate: rest.capacityEstimate,
+        price_level: rest.priceLevel,
+        music_type: rest.musicType,
+        is_active: rest.isActive,
+      })
+      .select()
+      .single()
+  );
+  await replaceHours(row.id, hours);
+  return (await getVenueById(row.id))!;
+}
+
+export type VenueAdminPatch = Partial<Omit<Venue, "id" | "slug" | "hours" | "createdAt" | "updatedAt">> & {
+  hours?: Array<{ dayOfWeek: number; openTime: string; closeTime: string }>;
+};
+
+export async function updateVenueAdmin(id: string, patch: VenueAdminPatch): Promise<Venue | null> {
+  const { hours, ...rest } = patch;
+  const columns: Row = {};
+  if (rest.name !== undefined) columns.name = rest.name;
+  if (rest.category !== undefined) columns.category = rest.category;
+  if (rest.subcategory !== undefined) columns.subcategory = rest.subcategory;
+  if (rest.venueType !== undefined) columns.venue_type = rest.venueType;
+  if (rest.neighborhood !== undefined) columns.neighborhood = rest.neighborhood;
+  if (rest.streetAddress !== undefined) columns.street_address = rest.streetAddress;
+  if (rest.city !== undefined) columns.city = rest.city;
+  if (rest.state !== undefined) columns.state = rest.state;
+  if (rest.postalCode !== undefined) columns.postal_code = rest.postalCode;
+  if (rest.latitude !== undefined) columns.latitude = rest.latitude;
+  if (rest.longitude !== undefined) columns.longitude = rest.longitude;
+  if (rest.timezone !== undefined) columns.timezone = rest.timezone;
+  if (rest.website !== undefined) columns.website = rest.website;
+  if (rest.instagramHandle !== undefined) columns.instagram_handle = rest.instagramHandle;
+  if (rest.capacityEstimate !== undefined) columns.capacity_estimate = rest.capacityEstimate;
+  if (rest.priceLevel !== undefined) columns.price_level = rest.priceLevel;
+  if (rest.musicType !== undefined) columns.music_type = rest.musicType;
+  if (rest.isActive !== undefined) columns.is_active = rest.isActive;
+  if (rest.externalPlaceId !== undefined) columns.external_place_id = rest.externalPlaceId;
+  if (rest.businessStatus !== undefined) columns.business_status = rest.businessStatus;
+  if (rest.externalRating !== undefined) columns.external_rating = rest.externalRating;
+  if (rest.externalRatingCount !== undefined) columns.external_rating_count = rest.externalRatingCount;
+  if (rest.claimStatus !== undefined) columns.claim_status = rest.claimStatus;
+
+  if (Object.keys(columns).length > 0) {
+    const { error } = await supabaseAdmin().from("venues").update(columns).eq("id", id);
+    if (error) throw new Error(`Supabase error: ${error.message}`);
+  } else {
+    const existing = await getVenueById(id);
+    if (!existing) return null;
+  }
+  if (hours) await replaceHours(id, hours);
+  return (await getVenueById(id)) ?? null;
+}
+
+export async function deleteVenueAdmin(id: string): Promise<boolean> {
+  // Every table referencing venues (hours, events, reports, snapshots, baselines, presence,
+  // saved) does so with `on delete cascade` in the migration, so this one delete is enough —
+  // no manual multi-table cleanup needed (unlike the old in-memory version).
+  const { error, count } = await supabaseAdmin().from("venues").delete({ count: "exact" }).eq("id", id);
+  if (error) throw new Error(`Supabase error: ${error.message}`);
+  return (count ?? 0) > 0;
+}
+
+export async function getVenueByExternalPlaceId(externalPlaceId: string): Promise<Venue | undefined> {
+  const row = unwrap(
+    await supabaseAdmin().from("venues").select(VENUE_SELECT).eq("external_place_id", externalPlaceId).maybeSingle()
+  );
+  return row ? rowToVenue(row) : undefined;
+}
+
+/**
+ * Materializes a Google-sourced venue we've never seen before as a real (persisted) Venue
+ * row with zero baseline data — it will correctly compute as DIRECTORY coverage (see
+ * lib/venues/coverageState.ts) rather than fabricating a score. Idempotent on
+ * externalPlaceId so searching the same place twice doesn't create duplicates (checked at
+ * the app layer rather than a DB-level upsert, since external_place_id has no unique
+ * constraint in the schema).
+ */
+export async function upsertDirectoryVenueFromExternal(fields: {
+  externalPlaceId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  streetAddress: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  timezone: string;
+  venueType: Venue["venueType"];
+  hours: Array<{ dayOfWeek: number; openTime: string; closeTime: string }>;
+  businessStatus: Venue["businessStatus"];
+  priceLevel: Venue["priceLevel"] | null;
+  externalRating: number | null;
+  externalRatingCount: number | null;
+  website: string | null;
+}): Promise<Venue> {
+  const existing = await getVenueByExternalPlaceId(fields.externalPlaceId);
+  if (existing) return existing;
+
+  const id = crypto.randomUUID();
+  const row = unwrap(
+    await supabaseAdmin()
+      .from("venues")
+      .insert({
+        external_place_id: fields.externalPlaceId,
+        name: fields.name,
+        slug: `${fields.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${id.slice(0, 6)}`,
+        category: "Nightlife",
+        subcategory: null,
+        venue_type: fields.venueType,
+        neighborhood: fields.city,
+        street_address: fields.streetAddress,
+        city: fields.city,
+        state: fields.state,
+        postal_code: fields.postalCode,
+        latitude: fields.latitude,
+        longitude: fields.longitude,
+        timezone: fields.timezone,
+        website: fields.website,
+        instagram_handle: null,
+        capacity_estimate: null,
+        price_level: fields.priceLevel ?? 2,
+        music_type: null,
+        is_active: true,
+        business_status: fields.businessStatus,
+        external_rating: fields.externalRating,
+        external_rating_count: fields.externalRatingCount,
+        claim_status: "UNCLAIMED",
+      })
+      .select()
+      .single()
+  );
+  await replaceHours(row.id, fields.hours);
+  return (await getVenueById(row.id))!;
+}
+
+export async function listVenuesInBounds(box: BoundingBox): Promise<Venue[]> {
+  const venues = await listVenues();
+  return venues.filter((v) => isWithinBoundingBox({ lat: v.latitude, lng: v.longitude }, box));
+}
+
+export async function searchVenues(query: string): Promise<Venue[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const escaped = q.replace(/[%_]/g, "\\$&");
+  const rows = unwrap(
+    await supabaseAdmin()
+      .from("venues")
+      .select(VENUE_SELECT)
+      .eq("is_active", true)
+      .or(
+        `name.ilike.%${escaped}%,neighborhood.ilike.%${escaped}%,category.ilike.%${escaped}%,music_type.ilike.%${escaped}%,venue_type.ilike.%${escaped}%`
+      )
+  );
+  return rows.map(rowToVenue);
+}
+
+// ---------------- reports ----------------
+
+export async function listReportsForVenue(venueId: string): Promise<VenueReport[]> {
+  const rows = unwrap(await supabaseAdmin().from("venue_reports").select().eq("venue_id", venueId));
+  return rows.map(rowToReport);
+}
+
+export async function getLastReportByUserForVenue(userId: string, venueId: string): Promise<VenueReport | undefined> {
+  const row = unwrap(
+    await supabaseAdmin()
+      .from("venue_reports")
+      .select()
+      .eq("user_id", userId)
+      .eq("venue_id", venueId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  );
+  return row ? rowToReport(row) : undefined;
+}
+
+export async function createReport(fields: Omit<VenueReport, "id" | "createdAt">): Promise<VenueReport> {
+  const row = unwrap(
+    await supabaseAdmin()
+      .from("venue_reports")
+      .insert({
+        venue_id: fields.venueId,
+        user_id: fields.userId,
+        crowd_level: fields.crowdLevel,
+        wait_level: fields.waitLevel,
+        energy_level: fields.energyLevel,
+        crowd_note: fields.crowdNote,
+        report_source: fields.reportSource,
+        is_verified_nearby: fields.isVerifiedNearby,
+        trust_weight_at_submission: fields.trustWeightAtSubmission,
+      })
+      .select()
+      .single()
+  );
+  return rowToReport(row);
+}
+
+export async function flagReport(reportId: string, flaggedBy: string, reason: string): Promise<void> {
+  unwrap(await supabaseAdmin().from("report_flags").insert({ report_id: reportId, flagged_by: flaggedBy, reason }));
+}
+
+/** Takes an hours-ago window (not a timestamp) so the "now" it's relative to is computed
+ * here, in a plain function — not inline in a Server Component's render body, where React's
+ * purity rule flags a direct Date.now() call. */
+export async function countReportsInLastHours(hours: number): Promise<number> {
+  const sinceIso = new Date(Date.now() - hours * 3_600_000).toISOString();
+  const { count, error } = await supabaseAdmin()
+    .from("venue_reports")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", sinceIso);
+  if (error) throw new Error(`Supabase error: ${error.message}`);
+  return count ?? 0;
+}
+
+export async function recentReportValuesByUser(userId: string, limit = 6): Promise<string[]> {
+  const rows: Row[] = unwrap(
+    await supabaseAdmin()
+      .from("venue_reports")
+      .select("crowd_level, wait_level, energy_level")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(limit)
+  );
+  return rows.map((r) => `${r.crowd_level}:${r.wait_level}:${r.energy_level}`);
+}
+
+// ---------------- baselines & events ----------------
+
+export async function listBaselinesForVenue(venueId: string): Promise<VenueHourlyBaseline[]> {
+  const rows = unwrap(await supabaseAdmin().from("venue_hourly_baselines").select().eq("venue_id", venueId));
+  return rows.map(rowToBaseline);
+}
+
+export async function listEventsForVenue(venueId: string): Promise<VenueEvent[]> {
+  const rows = unwrap(await supabaseAdmin().from("venue_events").select().eq("venue_id", venueId));
+  return rows.map(rowToEvent);
+}
+
+// ---------------- signal snapshots ----------------
+
+export async function listSnapshotHistory(venueId: string, sinceMinutesAgo = 240): Promise<VenueSignalSnapshot[]> {
+  const cutoff = new Date(Date.now() - sinceMinutesAgo * 60_000).toISOString();
+  const rows = unwrap(
+    await supabaseAdmin().from("venue_signal_snapshots").select().eq("venue_id", venueId).gte("captured_at", cutoff)
+  );
+  return rows.map(rowToSnapshot);
+}
+
+const SIGNAL_VERSION = 1;
+
+export async function appendSnapshot(venueId: string, result: PulseResult): Promise<VenueSignalSnapshot> {
+  const componentValue = (key: string) => result.components.find((c) => c.key === key)?.value ?? 0;
+
+  const row = unwrap(
+    await supabaseAdmin()
+      .from("venue_signal_snapshots")
+      .insert({
+        venue_id: venueId,
+        pulse_score: result.pulseScore,
+        confidence_score: result.confidenceScore,
+        crowd_score: componentValue("liveReports"),
+        trend_score: componentValue("trend"),
+        report_score: componentValue("liveReports"),
+        historical_score: componentValue("historical"),
+        event_score: componentValue("event"),
+        friend_activity_score: componentValue("friends"),
+        trend_direction: result.trend,
+        wait_min_minutes: result.waitEstimate?.minMinutes ?? null,
+        wait_max_minutes: result.waitEstimate?.maxMinutes ?? null,
+        expected_peak_start: result.expectedPeak?.start ?? null,
+        expected_peak_end: result.expectedPeak?.end ?? null,
+        signal_version: SIGNAL_VERSION,
+      })
+      .select()
+      .single()
+  );
+
+  // Keep the history bounded so the table doesn't grow forever during a long-running deploy.
+  const cutoff = new Date(Date.now() - 12 * 3_600_000).toISOString();
+  unwrap(await supabaseAdmin().from("venue_signal_snapshots").delete().eq("venue_id", venueId).lt("captured_at", cutoff));
+
+  return rowToSnapshot(row);
+}
+
+// ---------------- saved venues ----------------
+
+export async function listSavedVenueIds(userId: string): Promise<Set<string>> {
+  const rows: Row[] = unwrap(await supabaseAdmin().from("saved_venues").select("venue_id").eq("user_id", userId));
+  return new Set(rows.map((r) => r.venue_id));
+}
+
+export async function toggleSaved(userId: string, venueId: string): Promise<boolean> {
+  const { data: existing } = await supabaseAdmin()
+    .from("saved_venues")
+    .select()
+    .eq("user_id", userId)
+    .eq("venue_id", venueId)
+    .maybeSingle();
+
+  if (existing) {
+    unwrap(await supabaseAdmin().from("saved_venues").delete().eq("user_id", userId).eq("venue_id", venueId));
+    return false;
+  }
+  unwrap(await supabaseAdmin().from("saved_venues").insert({ user_id: userId, venue_id: venueId }));
+  return true;
+}

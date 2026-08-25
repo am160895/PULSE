@@ -1,26 +1,580 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0b0d10;
+  --surface: #11151a;
+  --surface-2: #171c22;
+  --surface-3: #1c222a;
+  --surface-hover: #20262e;
+
+  --text: #f7f8fa;
+  --text-secondary: #a8b0bb;
+  --text-muted: #6f7885;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  --accent: #7c5cff;
+  --accent-hover: #8d73ff;
+  --accent-soft: rgba(124, 92, 255, 0.14);
+
+  --hot: #ff4d6d;
+  --hot-soft: rgba(255, 77, 109, 0.14);
+
+  --rising: #ff9f43;
+  --rising-soft: rgba(255, 159, 67, 0.14);
+
+  --active: #2ed47a;
+  --active-soft: rgba(46, 212, 122, 0.14);
+
+  --quiet: #697386;
+  --quiet-soft: rgba(105, 115, 134, 0.14);
+
+  --danger: #ff5c5c;
+  --danger-soft: rgba(255, 92, 92, 0.14);
+
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.28);
+  --shadow-strong: 0 16px 48px rgba(0, 0, 0, 0.36);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Geist, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+h1 {
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+h2 {
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-weight: 650;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 140ms ease, opacity 140ms ease;
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.btn-accent {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-accent:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.btn-sm {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: var(--radius-xs);
+}
+
+/* ---------- Inputs ---------- */
+
+.input {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  outline: none;
+  font-size: 14px;
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ---------- Map search / filters ---------- */
+
+.map-search {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 12px);
+  left: 12px;
+  right: 12px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  background: rgba(17, 21, 26, 0.94);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-soft);
+  z-index: 20;
+}
+
+.filter-row {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 66px);
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  z-index: 20;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.filter-row::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(17, 21, 26, 0.94);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+  backdrop-filter: blur(16px);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+  flex-shrink: 0;
+}
+
+.filter-chip.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: transparent;
+}
+
+/* ---------- Venue markers ---------- */
+
+.venue-marker {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  font-size: 13px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-soft);
+  transition: transform 160ms ease, background-color 160ms ease;
+  cursor: pointer;
+}
+
+.venue-marker:hover,
+.venue-marker.selected {
+  transform: scale(1.1);
+}
+
+.venue-marker.hot {
+  background: var(--hot);
+  color: white;
+  border-color: transparent;
+}
+
+.venue-marker.rising {
+  background: var(--rising);
+  color: #111;
+  border-color: transparent;
+}
+
+.venue-marker.active {
+  background: var(--active);
+  color: #07110b;
+  border-color: transparent;
+}
+
+.venue-marker.moderate {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.venue-marker.quiet {
+  background: var(--quiet);
+  color: white;
+  border-color: transparent;
+}
+
+/* DIRECTORY coverage — a real, known venue with no PULSE activity data at all. Deliberately
+   plain (a dot, not a number) so it can never be mistaken for a fabricated live score. */
+.venue-marker.directory {
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  width: 14px;
+  height: 14px;
+  font-size: 0;
+}
+
+.pulse-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 77, 109, 0.45);
+  animation: pulse-ring 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+.pulse-ring.rising {
+  border-color: rgba(255, 159, 67, 0.45);
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+.cluster-marker {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+}
+
+/* ---------- Score ---------- */
+
+.pulse-score-number {
+  font-size: 36px;
+  font-weight: 760;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pulse-score-label {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ---------- Bottom sheet ---------- */
+
+.venue-sheet {
+  background: var(--surface);
+  border-top: 1px solid var(--border-strong);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -16px 50px rgba(0, 0, 0, 0.38);
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  margin: 10px auto 4px;
+}
+
+/* ---------- Admin tables ---------- */
+
+.table-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-wrapper thead {
+  background: var(--surface-2);
+}
+
+.table-wrapper th {
+  height: 40px;
+  padding: 0 14px;
+  text-align: left;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 550;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table-wrapper td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.table-wrapper tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table-wrapper tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+/* ---------- Admin metric cards ---------- */
+
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+}
+
+.metric-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.metric-value {
+  margin-top: 6px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Cards ---------- */
+
+.venue-card {
+  min-width: 240px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.venue-card:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+/* ---------- Bottom nav ---------- */
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(64px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: rgba(11, 13, 16, 0.96);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  z-index: 50;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nav-item.active {
+  color: var(--text);
+}
+
+/* Admin sidebar — a horizontal, left-aligned link, unlike .nav-item's bottom-tab layout. */
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 550;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.admin-nav-item:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* ---------- Badges ---------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.badge-high {
+  background: var(--active-soft);
+  color: var(--active);
+}
+
+.badge-medium {
+  background: var(--rising-soft);
+  color: var(--rising);
+}
+
+.badge-low {
+  background: var(--quiet-soft);
+  color: var(--text-secondary);
+}
+
+.badge-live {
+  background: var(--hot-soft);
+  color: var(--hot);
+}
+
+/* ---------- Scrollbar (desktop polish) ---------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.scroll-x {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: 4px;
+}
+
+.scroll-x::-webkit-scrollbar {
+  height: 4px;
 }

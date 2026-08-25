@@ -1,0 +1,104 @@
+import { ArrowDown, ArrowDownRight, ArrowUp, ArrowUpRight, Minus } from "lucide-react";
+import type { ConfidenceLabel, FreshnessLabel, PulseLabel, TrendDirection, VenueOpenState, WaitEstimate } from "@/types";
+import { PULSE_LABEL_TEXT } from "@/lib/pulse/labels";
+import { formatWaitEstimate } from "@/lib/pulse/waitEstimate";
+import { VENUE_OPEN_STATE_TEXT } from "@/lib/venues/openState";
+
+export function markerClassForLabel(label: PulseLabel): string {
+  switch (label) {
+    case "HOT_NOW":
+      return "hot";
+    case "VERY_ACTIVE":
+      return "rising";
+    case "BUSY":
+      return "active";
+    case "MODERATE":
+      return "moderate";
+    default:
+      return "quiet";
+  }
+}
+
+export function PulseLabelBadge({ label }: { label: PulseLabel }) {
+  const cls = markerClassForLabel(label);
+  const styles: Record<string, { bg: string; color: string }> = {
+    hot: { bg: "var(--hot-soft)", color: "var(--hot)" },
+    rising: { bg: "var(--rising-soft)", color: "var(--rising)" },
+    active: { bg: "var(--active-soft)", color: "var(--active)" },
+    moderate: { bg: "var(--surface-3)", color: "var(--text-secondary)" },
+    quiet: { bg: "var(--quiet-soft)", color: "var(--text-muted)" },
+  };
+  const s = styles[cls];
+  return (
+    <span className="badge" style={{ background: s.bg, color: s.color }}>
+      {PULSE_LABEL_TEXT[label]}
+    </span>
+  );
+}
+
+export function ConfidenceBadge({ label }: { label: ConfidenceLabel }) {
+  const cls = label === "HIGH" ? "badge-high" : label === "MEDIUM" ? "badge-medium" : "badge-low";
+  return <span className={`badge ${cls}`}>{label.charAt(0) + label.slice(1).toLowerCase()} confidence</span>;
+}
+
+export function FreshnessBadge({ label }: { label: FreshnessLabel }) {
+  if (label === "LIVE") return <span className="badge badge-live">Live</span>;
+  const text = label === "RECENT" ? "Recent" : label === "ESTIMATED" ? "Estimated" : "Typical activity";
+  return <span className="badge badge-low">{text}</span>;
+}
+
+export function TrendIndicator({ trend, delta }: { trend: TrendDirection; delta: number }) {
+  const config: Record<TrendDirection, { icon: React.ReactNode; color: string; text: string }> = {
+    RISING_FAST: { icon: <ArrowUp size={13} />, color: "var(--hot)", text: "Rising fast" },
+    RISING: { icon: <ArrowUpRight size={13} />, color: "var(--rising)", text: "Rising" },
+    STABLE: { icon: <Minus size={13} />, color: "var(--text-muted)", text: "Stable" },
+    FALLING: { icon: <ArrowDownRight size={13} />, color: "var(--text-secondary)", text: "Falling" },
+    FALLING_FAST: { icon: <ArrowDown size={13} />, color: "var(--text-secondary)", text: "Falling fast" },
+  };
+  const c = config[trend];
+  return (
+    <span className="inline-flex items-center gap-1 text-[13px] font-medium" style={{ color: c.color }}>
+      {c.icon}
+      {c.text}
+      {delta !== 0 && (
+        <span className="text-[var(--text-muted)]">
+          {delta > 0 ? "+" : ""}
+          {delta} / 30m
+        </span>
+      )}
+    </span>
+  );
+}
+
+export function WaitBadge({ estimate }: { estimate: WaitEstimate | null }) {
+  return <span className="text-[13px] text-[var(--text-secondary)]">{formatWaitEstimate(estimate)}</span>;
+}
+
+/** Only rendered for non-OPEN states — an open venue doesn't need a badge announcing the obvious. */
+export function OpenStateBadge({ state }: { state: VenueOpenState }) {
+  if (state === "OPEN") return null;
+  const cls = state === "CLOSING_SOON" ? "badge-medium" : state === "UNKNOWN" ? "badge-low" : "badge-low";
+  return <span className={`badge ${cls}`}>{VENUE_OPEN_STATE_TEXT[state]}</span>;
+}
+
+const SCORE_COLOR: Record<string, string> = {
+  hot: "var(--hot)",
+  rising: "var(--rising)",
+  active: "var(--active)",
+  moderate: "var(--text)",
+  quiet: "var(--text-muted)",
+};
+
+export function PulseScoreDisplay({ score, label }: { score: number; label: PulseLabel }) {
+  const color = SCORE_COLOR[markerClassForLabel(label)];
+  return (
+    <div>
+      <div className="pulse-score-number" style={{ color }}>
+        {score}
+      </div>
+      <div className="pulse-score-label" style={{ color }}>
+        {PULSE_LABEL_TEXT[label]}
+      </div>
+    </div>
+  );
+}
