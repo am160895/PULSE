@@ -4,7 +4,7 @@ import type { VenueWithPulse } from "@/types";
 import { getCurrentSession } from "@/lib/auth";
 import { listSavedVenueIds, listVenues, listVenuesInBounds, searchVenues } from "@/lib/data/repository";
 import { listVisiblePresenceForViewer } from "@/lib/data/social";
-import { computeVenueState } from "@/lib/pulse/composeVenue";
+import { computeVenueStatesBatch } from "@/lib/pulse/composeVenue";
 import { haversineDistanceMeters } from "@/lib/geo";
 import { searchExternalDirectoryVenues } from "@/lib/venues/searchExternal";
 
@@ -31,27 +31,26 @@ export async function GET(request: NextRequest) {
       : await listVenues();
 
   const now = new Date();
-  const [savedIds, visiblePresence] = await Promise.all([
+  const [states, savedIds, visiblePresence] = await Promise.all([
+    computeVenueStatesBatch(venues, now),
     listSavedVenueIds(session.profile.id),
     listVisiblePresenceForViewer(session.profile.id, now),
   ]);
   const userLocation = userLat && userLng ? { lat: Number(userLat), lng: Number(userLng) } : null;
 
-  let results: VenueWithPulse[] = await Promise.all(
-    venues.map(async (venue) => {
-      const { pulse, openState, coverageState } = await computeVenueState(venue, now);
-      const friendsPresent = visiblePresence.filter((p) => p.venueId === venue.id);
-      return {
-        ...venue,
-        pulse,
-        openState,
-        coverageState,
-        isSaved: savedIds.has(venue.id),
-        friendsPresent,
-        distanceMeters: userLocation ? haversineDistanceMeters(userLocation, { lat: venue.latitude, lng: venue.longitude }) : undefined,
-      };
-    })
-  );
+  let results: VenueWithPulse[] = venues.map((venue) => {
+    const { pulse, openState, coverageState } = states.get(venue.id)!;
+    const friendsPresent = visiblePresence.filter((p) => p.venueId === venue.id);
+    return {
+      ...venue,
+      pulse,
+      openState,
+      coverageState,
+      isSaved: savedIds.has(venue.id),
+      friendsPresent,
+      distanceMeters: userLocation ? haversineDistanceMeters(userLocation, { lat: venue.latitude, lng: venue.longitude }) : undefined,
+    };
+  });
 
   // Search always searches everything, even in NOW mode — you should always be able to
   // find a specific place by name, even if it has no live PULSE data yet.

@@ -148,6 +148,14 @@ export async function getVenueBySlug(slug: string): Promise<Venue | undefined> {
   return row ? rowToVenue(row) : undefined;
 }
 
+/** Batched sibling of getVenueById — one round-trip for N ids instead of N (used by
+ * /api/saved, which otherwise fetches each saved venue individually). */
+export async function getVenuesByIds(ids: string[]): Promise<Venue[]> {
+  if (ids.length === 0) return [];
+  const rows = unwrap(await supabaseAdmin().from("venues").select(VENUE_SELECT).in("id", ids));
+  return rows.map(rowToVenue);
+}
+
 // ---------------- venue admin CRUD ----------------
 // Callers (API routes) are responsible for the admin-role check — these functions enforce
 // nothing on their own, same convention as every other repository function in this file.
@@ -364,6 +372,27 @@ export async function listReportsForVenue(venueId: string): Promise<VenueReport[
   return rows.map(rowToReport);
 }
 
+function groupBy<T>(rows: T[], key: (row: T) => string): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const row of rows) {
+    const k = key(row);
+    const list = map.get(k);
+    if (list) list.push(row);
+    else map.set(k, [row]);
+  }
+  return map;
+}
+
+/** Batched sibling of listReportsForVenue — one round-trip for N venues instead of N.
+ * Used by computeVenueStatesBatch (composeVenue.ts) for map/list views, where scoring every
+ * visible venue with N separate per-venue queries each would multiply real network latency
+ * by however many venues are on screen. */
+export async function listReportsForVenues(venueIds: string[]): Promise<Map<string, VenueReport[]>> {
+  if (venueIds.length === 0) return new Map();
+  const rows = unwrap(await supabaseAdmin().from("venue_reports").select().in("venue_id", venueIds));
+  return groupBy(rows.map(rowToReport), (r) => r.venueId);
+}
+
 export async function getLastReportByUserForVenue(userId: string, venueId: string): Promise<VenueReport | undefined> {
   const row = unwrap(
     await supabaseAdmin()
@@ -435,9 +464,21 @@ export async function listBaselinesForVenue(venueId: string): Promise<VenueHourl
   return rows.map(rowToBaseline);
 }
 
+export async function listBaselinesForVenues(venueIds: string[]): Promise<Map<string, VenueHourlyBaseline[]>> {
+  if (venueIds.length === 0) return new Map();
+  const rows = unwrap(await supabaseAdmin().from("venue_hourly_baselines").select().in("venue_id", venueIds));
+  return groupBy(rows.map(rowToBaseline), (b) => b.venueId);
+}
+
 export async function listEventsForVenue(venueId: string): Promise<VenueEvent[]> {
   const rows = unwrap(await supabaseAdmin().from("venue_events").select().eq("venue_id", venueId));
   return rows.map(rowToEvent);
+}
+
+export async function listEventsForVenues(venueIds: string[]): Promise<Map<string, VenueEvent[]>> {
+  if (venueIds.length === 0) return new Map();
+  const rows = unwrap(await supabaseAdmin().from("venue_events").select().in("venue_id", venueIds));
+  return groupBy(rows.map(rowToEvent), (e) => e.venueId);
 }
 
 // ---------------- signal snapshots ----------------
@@ -450,33 +491,44 @@ export async function listSnapshotHistory(venueId: string, sinceMinutesAgo = 240
   return rows.map(rowToSnapshot);
 }
 
+export async function listSnapshotHistoryForVenues(
+  venueIds: string[],
+  sinceMinutesAgo = 240
+): Promise<Map<string, VenueSignalSnapshot[]>> {
+  if (venueIds.length === 0) return new Map();
+  const cutoff = new Date(Date.now() - sinceMinutesAgo * 60_000).toISOString();
+  const rows = unwrap(
+    await supabaseAdmin().from("venue_signal_snapshots").select().in("venue_id", venueIds).gte("captured_at", cutoff)
+  );
+  return groupBy(rows.map(rowToSnapshot), (s) => s.venueId);
+}
+
 const SIGNAL_VERSION = 1;
 
-export async function appendSnapshot(venueId: string, result: PulseResult): Promise<VenueSignalSnapshot> {
+function snapshotInsertRow(venueId: string, result: PulseResult): Row {
   const componentValue = (key: string) => result.components.find((c) => c.key === key)?.value ?? 0;
+  return {
+    venue_id: venueId,
+    pulse_score: result.pulseScore,
+    confidence_score: result.confidenceScore,
+    crowd_score: componentValue("liveReports"),
+    trend_score: componentValue("trend"),
+    report_score: componentValue("liveReports"),
+    historical_score: componentValue("historical"),
+    event_score: componentValue("event"),
+    friend_activity_score: componentValue("friends"),
+    trend_direction: result.trend,
+    wait_min_minutes: result.waitEstimate?.minMinutes ?? null,
+    wait_max_minutes: result.waitEstimate?.maxMinutes ?? null,
+    expected_peak_start: result.expectedPeak?.start ?? null,
+    expected_peak_end: result.expectedPeak?.end ?? null,
+    signal_version: SIGNAL_VERSION,
+  };
+}
 
+export async function appendSnapshot(venueId: string, result: PulseResult): Promise<VenueSignalSnapshot> {
   const row = unwrap(
-    await supabaseAdmin()
-      .from("venue_signal_snapshots")
-      .insert({
-        venue_id: venueId,
-        pulse_score: result.pulseScore,
-        confidence_score: result.confidenceScore,
-        crowd_score: componentValue("liveReports"),
-        trend_score: componentValue("trend"),
-        report_score: componentValue("liveReports"),
-        historical_score: componentValue("historical"),
-        event_score: componentValue("event"),
-        friend_activity_score: componentValue("friends"),
-        trend_direction: result.trend,
-        wait_min_minutes: result.waitEstimate?.minMinutes ?? null,
-        wait_max_minutes: result.waitEstimate?.maxMinutes ?? null,
-        expected_peak_start: result.expectedPeak?.start ?? null,
-        expected_peak_end: result.expectedPeak?.end ?? null,
-        signal_version: SIGNAL_VERSION,
-      })
-      .select()
-      .single()
+    await supabaseAdmin().from("venue_signal_snapshots").insert(snapshotInsertRow(venueId, result)).select().single()
   );
 
   // Keep the history bounded so the table doesn't grow forever during a long-running deploy.
@@ -484,6 +536,31 @@ export async function appendSnapshot(venueId: string, result: PulseResult): Prom
   unwrap(await supabaseAdmin().from("venue_signal_snapshots").delete().eq("venue_id", venueId).lt("captured_at", cutoff));
 
   return rowToSnapshot(row);
+}
+
+/** Batched sibling of appendSnapshot — one insert (+ one prune) for N venues instead of 2N.
+ * Used by computeVenueStatesBatch for map/list views; the per-venue pruning delete is safe
+ * to run scoped only to the venues in this batch (`.in("venue_id", venueIds)`) since venues
+ * outside the batch aren't touched by this call at all. */
+export async function appendSnapshotsBatch(entries: Array<{ venueId: string; result: PulseResult }>): Promise<void> {
+  if (entries.length === 0) return;
+  unwrap(
+    await supabaseAdmin()
+      .from("venue_signal_snapshots")
+      .insert(entries.map((e) => snapshotInsertRow(e.venueId, e.result)))
+  );
+
+  const cutoff = new Date(Date.now() - 12 * 3_600_000).toISOString();
+  unwrap(
+    await supabaseAdmin()
+      .from("venue_signal_snapshots")
+      .delete()
+      .in(
+        "venue_id",
+        entries.map((e) => e.venueId)
+      )
+      .lt("captured_at", cutoff)
+  );
 }
 
 // ---------------- saved venues ----------------

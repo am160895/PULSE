@@ -432,13 +432,16 @@ value changes after a bad first deploy.
 - **No real-time push** (Supabase Realtime, WebSockets) — the map/venue pages poll on an
   interval (45s / 20s). Fine for a demo, not ideal at scale.
 - **No E2E test suite** — manual browser verification only (see §20).
-- **Per-venue detail latency**: `computeVenueState()` now costs several real Supabase
-  round-trips per venue (it was a free in-memory lookup against the old local store) —
-  the venue detail page's "nearby alternatives" feature is capped at 10 candidates (§29-era
-  fix) to bound this, but a single venue page load still costs ~2-3s against a real network,
-  noticeably slower than the old instant local-store version. The next real optimization here
-  is denormalizing the score computation into a Postgres function/view so it's one round-trip
-  instead of ~6 — not done this pass.
+- **Per-venue scoring costs real network round-trips now** (it was a free in-memory lookup
+  against the old local store). Fixed for *lists* of venues — `computeVenueStatesBatch()`
+  (`src/lib/pulse/composeVenue.ts`) scores N venues with a fixed ~8 round-trips total instead
+  of ~6*N, used by every endpoint that scores more than one venue at once (map bounds,
+  explore, saved, venue-detail's nearby-alternatives). This was found and fixed after the
+  first production deploy: the 140-venue map view took 20+ seconds in production before this
+  fix (§30), ~1-2s after. The single-venue detail page itself (`computeVenueState`, one
+  venue, nothing to batch against) still costs ~6 round-trips serially and is the next real
+  target if it's still felt as slow — denormalizing the score computation into a Postgres
+  function/view would take it to one round-trip instead of ~6, not done this pass.
 - **No moderation UI** — `report_flags` and repetition detection exist as data/signals, but
   there's no admin screen to act on them yet.
 - **No geocoding/address validation** for the fictional seed venues — real venue onboarding

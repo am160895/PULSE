@@ -3,14 +3,14 @@ import type { VenueWithPulse } from "@/types";
 import { getCurrentSession } from "@/lib/auth";
 import { getVenueById, listSavedVenueIds, listVenues } from "@/lib/data/repository";
 import { listVisiblePresenceForViewer } from "@/lib/data/social";
-import { computeVenueState } from "@/lib/pulse/composeVenue";
+import { computeVenueStatesBatch } from "@/lib/pulse/composeVenue";
 import { haversineDistanceMeters } from "@/lib/geo";
 
 const ALTERNATIVES_RADIUS_METERS = 700;
-// computeVenueState() now costs a handful of real Supabase round-trips per venue (it was a
-// free in-memory lookup against the local dev store) — capping the candidate pool by
-// distance bounds that fan-out regardless of how dense a neighborhood is, rather than
-// scoring every venue within radius just to keep the closest few.
+// computeVenueStatesBatch() still costs real Supabase round-trips (just a fixed handful
+// regardless of venue count, not one set per venue) — capping the candidate pool by distance
+// keeps the batch itself small rather than scoring every venue within radius just to keep
+// the closest few.
 const MAX_ALTERNATIVE_CANDIDATES = 10;
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -22,15 +22,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!venue) return NextResponse.json({ error: "Venue not found" }, { status: 404 });
 
   const now = new Date();
-  const [{ pulse, openState, coverageState }, savedIds, presence, allVenues] = await Promise.all([
-    computeVenueState(venue, now),
+  const [savedIds, presence, allVenues] = await Promise.all([
     listSavedVenueIds(session.profile.id),
     listVisiblePresenceForViewer(session.profile.id, now),
     listVenues(),
   ]);
   const friendsPresent = presence.filter((p) => p.venueId === venue.id);
-
-  const result: VenueWithPulse = { ...venue, pulse, openState, coverageState, isSaved: savedIds.has(venue.id), friendsPresent };
 
   // Surfaced on the venue page when this venue is falling or has a long wait (§63).
   const nearby = allVenues
@@ -40,14 +37,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .sort((a, b) => a.distance - b.distance)
     .slice(0, MAX_ALTERNATIVE_CANDIDATES);
 
-  const alternatives: VenueWithPulse[] = (
-    await Promise.all(
-      nearby.map(async ({ v, distance }) => {
-        const state = await computeVenueState(v, now);
-        return { ...v, ...state, isSaved: savedIds.has(v.id), distanceMeters: distance };
-      })
-    )
-  )
+  // Score the primary venue and every candidate alternative in one batch — same total
+  // round-trip cost whether there are 0 or 10 nearby candidates.
+  const states = await computeVenueStatesBatch([venue, ...nearby.map((n) => n.v)], now);
+  const { pulse, openState, coverageState } = states.get(venue.id)!;
+
+  const result: VenueWithPulse = { ...venue, pulse, openState, coverageState, isSaved: savedIds.has(venue.id), friendsPresent };
+
+  const alternatives: VenueWithPulse[] = nearby
+    .map(({ v, distance }) => ({ ...v, ...states.get(v.id)!, isSaved: savedIds.has(v.id), distanceMeters: distance }))
     .filter((v) => v.pulse.pulseScore > pulse.pulseScore)
     .sort((a, b) => b.pulse.pulseScore - a.pulse.pulseScore)
     .slice(0, 3);

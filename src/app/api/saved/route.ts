@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { VenueWithPulse } from "@/types";
 import { getCurrentSession } from "@/lib/auth";
-import { getVenueById, listSavedVenueIds } from "@/lib/data/repository";
-import { computeVenueState } from "@/lib/pulse/composeVenue";
+import { getVenuesByIds, listSavedVenueIds } from "@/lib/data/repository";
+import { computeVenueStatesBatch } from "@/lib/pulse/composeVenue";
 
 export async function GET() {
   const session = await getCurrentSession();
@@ -10,12 +10,9 @@ export async function GET() {
 
   const now = new Date();
   const savedIds = await listSavedVenueIds(session.profile.id);
-  const savedVenues = (await Promise.all([...savedIds].map((id) => getVenueById(id)))).filter(
-    (v): v is NonNullable<typeof v> => !!v
-  );
-  const venues: VenueWithPulse[] = await Promise.all(
-    savedVenues.map(async (venue) => ({ ...venue, ...(await computeVenueState(venue, now)), isSaved: true }))
-  );
+  const savedVenues = await getVenuesByIds([...savedIds]);
+  const states = await computeVenueStatesBatch(savedVenues, now);
+  const venues: VenueWithPulse[] = savedVenues.map((venue) => ({ ...venue, ...states.get(venue.id)!, isSaved: true }));
 
   return NextResponse.json({ venues });
 }
