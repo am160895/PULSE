@@ -400,13 +400,41 @@ function groupBy<T>(rows: T[], key: (row: T) => string): Map<string, T[]> {
   return map;
 }
 
+const PAGE_SIZE = 1000;
+
+/**
+ * PostgREST caps a single response at a server-side max-rows limit (Supabase's default is
+ * 1000) regardless of the query itself — a batched query spanning many venues can trivially
+ * exceed that (151 venues x 168 hourly-baseline rows each is ~25k rows) and silently
+ * truncate rather than error, which is far worse than a visible failure: every venue whose
+ * rows fell outside the first page looked like it had zero data. Found in production after
+ * adding real venues pushed the total row count over the threshold for the first time.
+ * Paginates with .range() until a page comes back short, accumulating everything.
+ */
+async function fetchAllRows(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  page: (from: number, to: number) => PromiseLike<{ data: any; error: any }>
+): Promise<Row[]> {
+  const all: Row[] = [];
+  let offset = 0;
+  for (;;) {
+    const rows: Row[] = unwrap(await page(offset, offset + PAGE_SIZE - 1));
+    all.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return all;
+}
+
 /** Batched sibling of listReportsForVenue — one round-trip for N venues instead of N.
  * Used by computeVenueStatesBatch (composeVenue.ts) for map/list views, where scoring every
  * visible venue with N separate per-venue queries each would multiply real network latency
  * by however many venues are on screen. */
 export async function listReportsForVenues(venueIds: string[]): Promise<Map<string, VenueReport[]>> {
   if (venueIds.length === 0) return new Map();
-  const rows = unwrap(await supabaseAdmin().from("venue_reports").select().in("venue_id", venueIds));
+  const rows = await fetchAllRows((from, to) =>
+    supabaseAdmin().from("venue_reports").select().in("venue_id", venueIds).range(from, to)
+  );
   return groupBy(rows.map(rowToReport), (r) => r.venueId);
 }
 
@@ -483,7 +511,11 @@ export async function listBaselinesForVenue(venueId: string): Promise<VenueHourl
 
 export async function listBaselinesForVenues(venueIds: string[]): Promise<Map<string, VenueHourlyBaseline[]>> {
   if (venueIds.length === 0) return new Map();
-  const rows = unwrap(await supabaseAdmin().from("venue_hourly_baselines").select().in("venue_id", venueIds));
+  // The one most likely to actually exceed PAGE_SIZE: up to 168 rows per venue (7 days x
+  // 24 hours), so this hits 1000 rows at only ~6 venues in the batch.
+  const rows = await fetchAllRows((from, to) =>
+    supabaseAdmin().from("venue_hourly_baselines").select().in("venue_id", venueIds).range(from, to)
+  );
   return groupBy(rows.map(rowToBaseline), (b) => b.venueId);
 }
 
@@ -494,7 +526,9 @@ export async function listEventsForVenue(venueId: string): Promise<VenueEvent[]>
 
 export async function listEventsForVenues(venueIds: string[]): Promise<Map<string, VenueEvent[]>> {
   if (venueIds.length === 0) return new Map();
-  const rows = unwrap(await supabaseAdmin().from("venue_events").select().in("venue_id", venueIds));
+  const rows = await fetchAllRows((from, to) =>
+    supabaseAdmin().from("venue_events").select().in("venue_id", venueIds).range(from, to)
+  );
   return groupBy(rows.map(rowToEvent), (e) => e.venueId);
 }
 
@@ -514,8 +548,8 @@ export async function listSnapshotHistoryForVenues(
 ): Promise<Map<string, VenueSignalSnapshot[]>> {
   if (venueIds.length === 0) return new Map();
   const cutoff = new Date(Date.now() - sinceMinutesAgo * 60_000).toISOString();
-  const rows = unwrap(
-    await supabaseAdmin().from("venue_signal_snapshots").select().in("venue_id", venueIds).gte("captured_at", cutoff)
+  const rows = await fetchAllRows((from, to) =>
+    supabaseAdmin().from("venue_signal_snapshots").select().in("venue_id", venueIds).gte("captured_at", cutoff).range(from, to)
   );
   return groupBy(rows.map(rowToSnapshot), (s) => s.venueId);
 }
