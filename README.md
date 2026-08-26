@@ -368,6 +368,15 @@ score narrative (rising, falling, quiet-but-good, event-driven) is demonstrable.
 score-distribution summary so you can sanity-check that scoring isn't degenerate (e.g. "is
 everything 90+?") every time you reseed.
 
+`scripts/addRealVenues.ts` (`npm run seed:real`) is a separate, one-time script that adds
+real, currently-operating NYC bars (name/address/hours verified via web search, not
+generated) as genuine `Venue` rows — deliberately *without* any baseline or report data, so
+they correctly compute as `DIRECTORY` coverage and show "No live PULSE yet" rather than a
+fabricated score for an actual business. Safely re-runnable (dedupes on name+address). This
+is the free alternative to wiring up Google Places (§16/§22) for getting real venues into
+the map — it doesn't scale the way a live API integration would, but costs nothing and
+avoids ever showing invented activity data for a real place.
+
 ## 19. Demo simulator
 
 `POST /api/dev/simulate` (dev-only — 404s if `NODE_ENV=production`) re-runs the same

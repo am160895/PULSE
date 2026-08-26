@@ -6,9 +6,11 @@ import type {
   VenueHours,
   VenueReport,
   VenueSignalSnapshot,
+  VenueType,
 } from "@/types";
 import type { BoundingBox } from "@/lib/geo";
 import { isWithinBoundingBox } from "@/lib/geo";
+import { VENUE_TYPE_LABELS } from "@/config/constants";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { unwrap } from "@/lib/supabase/unwrap";
 
@@ -353,14 +355,29 @@ export async function searchVenues(query: string): Promise<Venue[]> {
   const q = query.trim();
   if (!q) return [];
   const escaped = q.replace(/[%_]/g, "\\$&");
+  const qLower = q.toLowerCase();
+
+  const orParts = [
+    `name.ilike.%${escaped}%`,
+    `neighborhood.ilike.%${escaped}%`,
+    `category.ilike.%${escaped}%`,
+    `music_type.ilike.%${escaped}%`,
+  ];
+
+  // venue_type is a Postgres enum column — ilike (~~*) has no defined operator for enums,
+  // and PostgREST's .or() logic-tree parser rejects a ::text cast inline too (tried both;
+  // both failed against the real database, only surfaced once the search bar was actually
+  // exercised against Supabase for the first time). Since it's a small fixed set, match it
+  // by resolving the query to a known type/label and using an exact eq() instead — loses
+  // substring matching on this one field (typing "cl" won't match CLUB), but that's an
+  // honest tradeoff for a filter that was never going to be free-text on an enum anyway.
+  const matchedType = (Object.keys(VENUE_TYPE_LABELS) as VenueType[]).find(
+    (t) => t.toLowerCase() === qLower || VENUE_TYPE_LABELS[t].toLowerCase() === qLower
+  );
+  if (matchedType) orParts.push(`venue_type.eq.${matchedType}`);
+
   const rows = unwrap(
-    await supabaseAdmin()
-      .from("venues")
-      .select(VENUE_SELECT)
-      .eq("is_active", true)
-      .or(
-        `name.ilike.%${escaped}%,neighborhood.ilike.%${escaped}%,category.ilike.%${escaped}%,music_type.ilike.%${escaped}%,venue_type.ilike.%${escaped}%`
-      )
+    await supabaseAdmin().from("venues").select(VENUE_SELECT).eq("is_active", true).or(orParts.join(","))
   );
   return rows.map(rowToVenue);
 }
