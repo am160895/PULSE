@@ -31,7 +31,15 @@ export default function MapPage() {
               if (f === "RISING" && v.pulse.trend !== "RISING" && v.pulse.trend !== "RISING_FAST") return false;
               if (f === "FRIENDS" && (v.friendsPresent?.length ?? 0) === 0) return false;
               if (f === "NO_LINE" && v.pulse.waitEstimate && (v.pulse.waitEstimate.maxMinutes ?? 99) > 5) return false;
-              if (f === "OPEN_NOW" && v.openState !== "OPEN" && v.openState !== "CLOSING_SOON") return false;
+              // Excludes venues we're actually confident are closed — never venues with
+              // simply no hours on file. Absence of hours data isn't evidence of being
+              // closed, and hiding real, possibly-open bars just because nobody has
+              // entered their hours yet defeats the point of a discovery map.
+              if (
+                f === "OPEN_NOW" &&
+                (v.openState === "CLOSED" || v.openState === "TEMPORARILY_CLOSED" || v.openState === "PERMANENTLY_CLOSED")
+              )
+                return false;
               // Closed-but-opening-later — more useful than simply hiding every closed
               // venue (spec §23).
               if (f === "LATER_TONIGHT" && !(v.currentPulseStatus === "CLOSED" && v.openStatus.nextOpenAt)) return false;

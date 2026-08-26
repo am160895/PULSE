@@ -16,6 +16,7 @@ import {
 } from "@/components/venues/Badges";
 import { ActivityGraph } from "@/components/venues/ActivityGraph";
 import { ReportSheet, type ReportSubmitResult } from "@/components/venues/ReportSheet";
+import { QuickPulseCheck } from "@/components/venues/QuickPulseCheck";
 import { WeeklyHoursSheet } from "@/components/venues/WeeklyHoursSheet";
 import { ContributionSuccess, type ContributionSuccessProps } from "@/components/gamification/ContributionSuccess";
 import { BadgeCelebration } from "@/components/gamification/BadgeCelebration";
@@ -54,6 +55,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
   const { data: history } = useVenueHistory(id);
   const invalidate = useInvalidateVenue();
   const [showReport, setShowReport] = useState(false);
+  const [showQuickCheck, setShowQuickCheck] = useState(false);
   const [showHours, setShowHours] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [imHereSubmitting, setImHereSubmitting] = useState(false);
@@ -184,10 +186,16 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     });
     invalidate(venue.id);
     if (result.data.badgesUnlocked.length > 0) queueBadgeCelebrations(result.data.badgesUnlocked);
+    // Immediately follow up with a fast, skippable 3-tap check — I'm Here already earned
+    // its own XP above; answering these earns meaningfully more on top, through the same
+    // report pipeline as the full Report sheet.
+    setShowQuickCheck(true);
   }
 
+  // Shared by both the full Report sheet and the post-I'm-Here quick check — same
+  // response shape either way (both submit through /api/venues/[id]/reports), so the
+  // XP/badge/impact feedback is identical regardless of which flow produced it.
   function handleReportSubmitted(result: ReportSubmitResult) {
-    setShowReport(false);
     invalidate(venue.id);
     setLastOwnReportId(result.reportId);
 
@@ -373,7 +381,25 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
       </section>
 
       {showReport && (
-        <ReportSheet venueId={venue.id} onClose={() => setShowReport(false)} onSubmitted={handleReportSubmitted} />
+        <ReportSheet
+          venueId={venue.id}
+          onClose={() => setShowReport(false)}
+          onSubmitted={(result) => {
+            setShowReport(false);
+            handleReportSubmitted(result);
+          }}
+        />
+      )}
+
+      {showQuickCheck && (
+        <QuickPulseCheck
+          venueId={venue.id}
+          onClose={() => setShowQuickCheck(false)}
+          onSubmitted={(result) => {
+            setShowQuickCheck(false);
+            handleReportSubmitted(result);
+          }}
+        />
       )}
 
       {showHours && <WeeklyHoursSheet hours={venue.hours} timeZone={venue.timezone} onClose={() => setShowHours(false)} />}

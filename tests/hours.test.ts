@@ -3,6 +3,7 @@ import { findOpenWindow } from "@/lib/venues/hours";
 import { deriveVenueOpenState } from "@/lib/venues/openState";
 import { buildEffectiveHours } from "@/lib/venues/specialHours";
 import { getVenueOpenStatus } from "@/lib/venues/getVenueOpenStatus";
+import { currentPulseStatusFor } from "@/lib/venues/currentPulseStatus";
 import { makeHours, makeSpecialHours } from "./fixtures";
 
 const NY = "America/New_York";
@@ -97,6 +98,26 @@ describe("special hours override (spec §20)", () => {
     const special = [makeSpecialHours({ venueId: "v", specialDate: "2026-06-15", isClosed: true, openTime: null, closeTime: null })];
     const effective = buildEffectiveHours(FRI_5PM_3AM, special, now, NY);
     expect(deriveVenueOpenState(effective, now, NY)).toBe("OPEN");
+  });
+});
+
+describe("currentPulseStatusFor", () => {
+  it("is LIVE for a venue with no hours on file — absence of data is not evidence of closure", () => {
+    // calculatePulseScore's own openness gate deliberately treats empty hours as "assume
+    // open, don't penalize" (see calculateOpennessSignal) — currentPulseStatus must agree,
+    // or a venue with a real computed score would have it hidden behind a false "closed" display.
+    expect(currentPulseStatusFor("UNKNOWN")).toBe("LIVE");
+  });
+
+  it("is LIVE while genuinely open or closing soon", () => {
+    expect(currentPulseStatusFor("OPEN")).toBe("LIVE");
+    expect(currentPulseStatusFor("CLOSING_SOON")).toBe("LIVE");
+  });
+
+  it("is CLOSED only when there's actual confidence the venue is closed", () => {
+    expect(currentPulseStatusFor("CLOSED")).toBe("CLOSED");
+    expect(currentPulseStatusFor("TEMPORARILY_CLOSED")).toBe("CLOSED");
+    expect(currentPulseStatusFor("PERMANENTLY_CLOSED")).toBe("CLOSED");
   });
 });
 
