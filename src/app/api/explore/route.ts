@@ -35,11 +35,12 @@ export async function GET(request: NextRequest) {
       openStatus: state.openStatus,
       currentPulseStatus: state.currentPulseStatus,
       hoursDiscrepancy: state.hoursDiscrepancy,
+      vsTypical: state.vsTypical,
       isSaved: savedIds.has(venue.id),
       friendsPresent: visiblePresence.filter((p) => p.venueId === venue.id),
       distanceMeters: userLocation ? haversineDistanceMeters(userLocation, { lat: venue.latitude, lng: venue.longitude }) : undefined,
     };
   });
 
-  return NextResponse.json({ sections: buildExploreSections(venues) });
+  return NextResponse.json({ sections: buildExploreSections(venues, now) });
 }

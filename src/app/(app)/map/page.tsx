@@ -4,8 +4,10 @@ import { useMemo, useState } from "react";
 import { MapView } from "@/components/map/MapView";
 import { MapSearchAndFilters, type MapFilter } from "@/components/map/MapSearchAndFilters";
 import { VenueBottomSheet } from "@/components/venues/VenueBottomSheet";
+import { BestBetStrip } from "@/components/map/BestBetStrip";
 import { useInvalidateVenue, useVenueSearch, useVenuesInBounds, type BoundsParams, type CoverageMode } from "@/hooks/api";
 import { requestJson } from "@/lib/http/requestJson";
+import { isBestBetVenue } from "@/lib/pulse/explore";
 
 export default function MapPage() {
   const [bounds, setBounds] = useState<BoundsParams | null>(null);
@@ -29,6 +31,9 @@ export default function MapPage() {
             for (const f of activeFilters) {
               if (f === "HOT" && v.pulse.pulseLabel !== "HOT_NOW") return false;
               if (f === "RISING" && v.pulse.trend !== "RISING" && v.pulse.trend !== "RISING_FAST") return false;
+              // Same predicate the Explore tab's Best Bet section uses (lib/pulse/explore.ts) —
+              // one definition, so the map and Explore never silently disagree on what counts.
+              if (f === "BEST_BET" && !isBestBetVenue(v, new Date())) return false;
               if (f === "FRIENDS" && (v.friendsPresent?.length ?? 0) === 0) return false;
               if (f === "NO_LINE" && v.pulse.waitEstimate && (v.pulse.waitEstimate.maxMinutes ?? 99) > 5) return false;
               // Excludes venues we're actually confident are closed — never venues with
@@ -106,8 +111,10 @@ export default function MapPage() {
         coverage={coverage}
         onCoverageChange={setCoverage}
       />
-      {selectedVenue && (
+      {selectedVenue ? (
         <VenueBottomSheet venue={selectedVenue} onClose={() => setSelectedId(null)} onToggleSaved={handleToggleSaved} />
+      ) : (
+        <BestBetStrip userLocation={userLocation} />
       )}
     </div>
   );

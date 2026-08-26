@@ -4,7 +4,18 @@ import { useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import type { CoverageMode } from "@/hooks/api";
 
-export type MapFilter = "HOT" | "RISING" | "FRIENDS" | "NO_LINE" | "OPEN_NOW" | "LATER_TONIGHT" | "BAR" | "CLUB" | "ROOFTOP" | "LIVE_MUSIC";
+export type MapFilter =
+  | "HOT"
+  | "RISING"
+  | "BEST_BET"
+  | "FRIENDS"
+  | "NO_LINE"
+  | "OPEN_NOW"
+  | "LATER_TONIGHT"
+  | "BAR"
+  | "CLUB"
+  | "ROOFTOP"
+  | "LIVE_MUSIC";
 
 // Primary layer stays on screen at all times (§11: reduce filter overload); everything
 // else lives behind "More" so the first screen isn't a wall of chips. OPEN_NOW is
@@ -14,6 +25,7 @@ const PRIMARY_FILTERS: { key: MapFilter; label: string }[] = [
   { key: "OPEN_NOW", label: "Open now" },
   { key: "HOT", label: "Hot now" },
   { key: "RISING", label: "Rising" },
+  { key: "BEST_BET", label: "Best bet" },
   { key: "NO_LINE", label: "No line" },
   { key: "FRIENDS", label: "Friends" },
 ];

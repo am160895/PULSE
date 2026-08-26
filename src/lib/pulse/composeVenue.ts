@@ -1,4 +1,15 @@
-import type { ConfirmedSignal, CurrentPulseStatus, PulseResult, Venue, VenueCoverageState, VenueHourlyBaseline, VenueOpenState, VenueOpenStatus } from "@/types";
+import type {
+  ConfirmedSignal,
+  CurrentPulseStatus,
+  PulseResult,
+  Venue,
+  VenueCoverageState,
+  VenueHourlyBaseline,
+  VenueNightlyRollup,
+  VenueOpenState,
+  VenueOpenStatus,
+  VsTypicalComparison,
+} from "@/types";
 import {
   appendSnapshot,
   appendSnapshotsBatch,
@@ -6,6 +17,8 @@ import {
   listBaselinesForVenues,
   listEventsForVenue,
   listEventsForVenues,
+  listRecentRollupsForVenue,
+  listRecentRollupsForVenues,
   listReportsForVenue,
   listReportsForVenues,
   listSnapshotHistory,
@@ -15,14 +28,17 @@ import {
 } from "@/lib/data/repository";
 import { allTrustScoresMap, countAnyPresentAtVenue, countPresentAtVenues } from "@/lib/data/social";
 import { calculatePulseScore } from "./calculatePulseScore";
+import { calculateVsTypicalSignal } from "./signals/vsTypical";
 import { deriveVenueOpenState } from "@/lib/venues/openState";
 import { deriveCoverageState } from "@/lib/venues/coverageState";
 import { buildEffectiveHours } from "@/lib/venues/specialHours";
 import { getVenueOpenStatus } from "@/lib/venues/getVenueOpenStatus";
 import { currentPulseStatusFor } from "@/lib/venues/currentPulseStatus";
-import { HOURS_DISCREPANCY_WINDOW_MINUTES } from "@/config/constants";
+import { HOURS_DISCREPANCY_WINDOW_MINUTES, NIGHTLIFE_DAY_BOUNDARY_HOUR, ROLLUP_LOOKBACK_NIGHTS } from "@/config/constants";
 import { evaluateOwnReportsForConsensus } from "@/lib/gamification/consensus";
 import { evaluateBadges, type BadgeUnlock } from "@/lib/gamification/badges";
+import { finalizeNightlyRollupsIfNeeded } from "./history/nightlyRollup";
+import { nightlifeDayParts } from "@/lib/time/zoned";
 
 const SNAPSHOT_MIN_INTERVAL_MINUTES = 2;
 
@@ -85,6 +101,23 @@ export interface VenueState {
    * separately, right where those XP awards happen). Always [] when newlyConfirmedSignals
    * is empty — badges are only re-checked when there's genuinely new ledger activity. */
   newlyUnlockedBadges: BadgeUnlock[];
+  /** null unless the venue is currently LIVE with real (non-DIRECTORY) data and enough
+   * nightly-rollup history to compare against — see signals/vsTypical.ts. */
+  vsTypical: VsTypicalComparison | null;
+}
+
+/** Never shows a comparison for a venue with no live score to compare (CLOSED/DIRECTORY)
+ * — "22% busier than usual" is nonsensical when there's nothing current to measure. */
+function deriveVsTypical(
+  recentRollups: VenueNightlyRollup[],
+  nightlifeDayOfWeek: number,
+  currentPulseStatus: CurrentPulseStatus,
+  coverageState: VenueCoverageState,
+  pulseScore: number
+): VsTypicalComparison | null {
+  if (currentPulseStatus !== "LIVE" || coverageState === "DIRECTORY") return null;
+  const sameWeekday = recentRollups.filter((r) => r.nightlifeDayOfWeek === nightlifeDayOfWeek).slice(0, ROLLUP_LOOKBACK_NIGHTS);
+  return calculateVsTypicalSignal(sameWeekday, pulseScore);
 }
 
 function deriveDiscrepancy(
@@ -107,6 +140,12 @@ function deriveDiscrepancy(
  * lib/gamification/consensus.ts) — the delayed-accuracy-reward mechanism. Omit it for
  * unauthenticated/system callers that have no "viewer" to reward. */
 export async function computeVenueState(venue: Venue, now: Date, viewerId?: string): Promise<VenueState> {
+  // Archives the most-recently-completed nightlife-night if nobody has yet — see
+  // history/nightlyRollup.ts. Runs before this call's own snapshot append/prune
+  // (inside scoreAndMaybeSnapshot below), so this request's own pruning can't delete
+  // snapshots finalize still needs.
+  await finalizeNightlyRollupsIfNeeded([venue], now);
+
   const signals = await fetchSignals(venue, now);
   const effectiveHours = buildEffectiveHours(venue.hours, signals.specialHours, now, venue.timezone);
   const pulse = await scoreAndMaybeSnapshot(venue, now, signals, effectiveHours);
@@ -116,12 +155,16 @@ export async function computeVenueState(venue: Venue, now: Date, viewerId?: stri
   const currentPulseStatus = currentPulseStatusFor(openState);
   const hoursDiscrepancy = deriveDiscrepancy(currentPulseStatus, signals.reports, now);
 
+  const recentRollups = await listRecentRollupsForVenue(venue.id, now);
+  const nightlifeDayOfWeek = nightlifeDayParts(now, venue.timezone, NIGHTLIFE_DAY_BOUNDARY_HOUR).nightlifeDayOfWeek;
+  const vsTypical = deriveVsTypical(recentRollups, nightlifeDayOfWeek, currentPulseStatus, coverageState, pulse.pulseScore);
+
   const newlyConfirmedSignals = viewerId
     ? await evaluateOwnReportsForConsensus(viewerId, venue, signals.reports, now, pulse.trend)
     : [];
   const newlyUnlockedBadges = newlyConfirmedSignals.length > 0 ? await evaluateBadges(viewerId!, now) : [];
 
-  return { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, newlyConfirmedSignals, newlyUnlockedBadges };
+  return { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, vsTypical, newlyConfirmedSignals, newlyUnlockedBadges };
 }
 
 /**
@@ -140,8 +183,12 @@ export async function computeVenueState(venue: Venue, now: Date, viewerId?: stri
  * a pending confirmation, not just revisiting one venue's detail page.
  */
 export async function computeVenueStatesBatch(venues: Venue[], now: Date, viewerId?: string): Promise<Map<string, VenueState>> {
+  // See computeVenueState's identical call — must finish before this batch's own
+  // snapshot pruning (inside appendSnapshotsBatch, called at the end of this function).
+  await finalizeNightlyRollupsIfNeeded(venues, now);
+
   const ids = venues.map((v) => v.id);
-  const [reportsByVenue, baselinesByVenue, eventsByVenue, historyByVenue, presenceByVenue, trustScores, specialHoursByVenue] =
+  const [reportsByVenue, baselinesByVenue, eventsByVenue, historyByVenue, presenceByVenue, trustScores, specialHoursByVenue, rollupsByVenue] =
     await Promise.all([
       listReportsForVenues(ids),
       listBaselinesForVenues(ids),
@@ -150,6 +197,7 @@ export async function computeVenueStatesBatch(venues: Venue[], now: Date, viewer
       countPresentAtVenues(ids, now),
       allTrustScoresMap(),
       listSpecialHoursForVenues(ids, now),
+      listRecentRollupsForVenues(ids, now),
     ]);
 
   const snapshotsToWrite: Array<{ venueId: string; result: PulseResult }> = [];
@@ -178,6 +226,10 @@ export async function computeVenueStatesBatch(venues: Venue[], now: Date, viewer
     const currentPulseStatus = currentPulseStatusFor(openState);
     const hoursDiscrepancy = deriveDiscrepancy(currentPulseStatus, reports, now);
 
+    const rollups = rollupsByVenue.get(venue.id) ?? [];
+    const nightlifeDayOfWeek = nightlifeDayParts(now, venue.timezone, NIGHTLIFE_DAY_BOUNDARY_HOUR).nightlifeDayOfWeek;
+    const vsTypical = deriveVsTypical(rollups, nightlifeDayOfWeek, currentPulseStatus, coverageState, pulse.pulseScore);
+
     const newlyConfirmedSignals = viewerId ? await evaluateOwnReportsForConsensus(viewerId, venue, reports, now, pulse.trend) : [];
     const newlyUnlockedBadges = newlyConfirmedSignals.length > 0 ? await evaluateBadges(viewerId!, now) : [];
 
@@ -188,6 +240,7 @@ export async function computeVenueStatesBatch(venues: Venue[], now: Date, viewer
       openStatus,
       currentPulseStatus,
       hoursDiscrepancy,
+      vsTypical,
       newlyConfirmedSignals,
       newlyUnlockedBadges,
     });

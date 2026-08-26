@@ -14,6 +14,7 @@ import {
   TrendIndicator,
   WaitBadge,
 } from "@/components/venues/Badges";
+import { VsTypicalBadge } from "@/components/venues/VsTypicalBadge";
 import { ActivityGraph } from "@/components/venues/ActivityGraph";
 import { ReportSheet, type ReportSubmitResult } from "@/components/venues/ReportSheet";
 import { QuickPulseCheck } from "@/components/venues/QuickPulseCheck";
@@ -65,6 +66,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
   const badgeQueueRef = useRef<BadgeCode[]>([]);
   const [lastOwnReportId, setLastOwnReportId] = useState<string | null>(null);
   const shownConfirmationsRef = useRef<Set<string>>(new Set());
+  const [claiming, setClaiming] = useState(false);
 
   function celebrateNextBadge() {
     const next = badgeQueueRef.current.shift();
@@ -127,7 +129,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     );
   }
 
-  const { venue, alternatives } = data;
+  const { venue, alternatives, myOwnershipStatus } = data;
   const { pulse } = venue;
   const isDirectory = venue.coverageState === "DIRECTORY";
   const isClosed = venue.currentPulseStatus === "CLOSED";
@@ -210,6 +212,13 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     if (result.badgesUnlocked.length > 0) queueBadgeCelebrations(result.badgesUnlocked);
   }
 
+  async function handleClaim() {
+    setClaiming(true);
+    const result = await requestJson<{ status: string }>(`/api/venues/${venue.id}/claim`, { method: "POST" });
+    setClaiming(false);
+    if (result.ok) refetch();
+  }
+
   async function handleSimulateConfirmation() {
     if (!lastOwnReportId) return;
     await requestJson("/api/dev/simulate-confirmation", { method: "POST", body: { reportId: lastOwnReportId } });
@@ -260,6 +269,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
             <div className="flex flex-col gap-1.5">
               <PulseLabelBadge label={pulse.pulseLabel} />
               <ConfidenceBadge label={pulse.confidenceLabel} />
+              {venue.vsTypical && <VsTypicalBadge comparison={venue.vsTypical} />}
             </div>
           </div>
 
@@ -332,7 +342,21 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
         </button>
       </div>
       <div className="grid grid-cols-3 gap-2 mb-6">
-        <div />
+        {myOwnershipStatus === "VERIFIED" ? (
+          <Link href={`/owner/${venue.id}`} className="btn btn-secondary">
+            Manage
+          </Link>
+        ) : myOwnershipStatus === "PENDING" ? (
+          <button className="btn btn-secondary" disabled title="An admin still needs to review this claim">
+            Claim pending
+          </button>
+        ) : venue.claimStatus === "UNCLAIMED" || venue.claimStatus === "REJECTED" ? (
+          <button className="btn btn-secondary" onClick={handleClaim} disabled={claiming}>
+            {claiming ? "…" : "Claim venue"}
+          </button>
+        ) : (
+          <div />
+        )}
         <button className="btn btn-secondary col-span-2" onClick={handleShare}>
           <Share2 size={15} /> {shareMessage ?? "Share"}
         </button>

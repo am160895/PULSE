@@ -22,6 +22,7 @@ export async function GET() {
       openStatus: state.openStatus,
       currentPulseStatus: state.currentPulseStatus,
       hoursDiscrepancy: state.hoursDiscrepancy,
+      vsTypical: state.vsTypical,
       isSaved: true,
     };
   });

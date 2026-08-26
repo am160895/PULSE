@@ -228,6 +228,50 @@ export interface VenueHourlyBaseline {
   updatedAt: string;
 }
 
+/** One row per venue per completed nightlife-night (see lib/time/zoned.ts's
+ * nightlifeDayParts) — the durable archive venue_signal_snapshots itself can't be,
+ * since those are pruned after 12 hours. Written only by the compute-on-read path in
+ * lib/pulse/history/nightlyRollup.ts. */
+export interface VenueNightlyRollup {
+  id: string;
+  venueId: string;
+  nightlifeDate: string; // "YYYY-MM-DD", venue-local
+  nightlifeDayOfWeek: number;
+  avgPulseScore: number;
+  peakPulseScore: number;
+  peakAt: string | null;
+  sampleCount: number;
+  reportCount: number;
+  computedAt: string;
+}
+
+export type VsTypicalLabel = "MUCH_BUSIER" | "BUSIER" | "TYPICAL" | "QUIETER" | "MUCH_QUIETER";
+
+/** How tonight's current reading compares to this venue's own recent same-weekday
+ * nights — never fed back into pulseScore itself, purely a display signal. Whole-night
+ * framing (compares to past nights' averages, not hour-matched) — see
+ * lib/pulse/signals/vsTypical.ts for why. */
+export interface VsTypicalComparison {
+  deltaPercent: number;
+  label: VsTypicalLabel;
+  typicalScore: number;
+  sampleNights: number;
+}
+
+export type VenueOwnerStatus = "PENDING" | "VERIFIED" | "REJECTED" | "REVOKED";
+
+export interface VenueOwner {
+  id: string;
+  venueId: string;
+  profileId: string;
+  status: VenueOwnerStatus;
+  requestedAt: string;
+  verifiedAt: string | null;
+  verifiedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Friendship {
   id: string;
   requesterId: string;
@@ -403,6 +447,9 @@ export interface VenueWithPulse extends Venue {
   /** True when a verified-nearby report arrived recently at a venue that's currently
    * CLOSED per its hours — flags for review, never auto-reopens the venue. */
   hoursDiscrepancy: boolean;
+  /** null unless the venue is LIVE, has DIRECTORY-clearing baseline data, and has
+   * enough recent nightly-rollup history to compare against — see lib/pulse/signals/vsTypical.ts. */
+  vsTypical: VsTypicalComparison | null;
   distanceMeters?: number;
   friendsPresent?: PresenceSummary[];
   isSaved?: boolean;

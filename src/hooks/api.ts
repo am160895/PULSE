@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { BadgeCode, ConfirmedSignal, VenueWithPulse } from "@/types";
+import type { BadgeCode, ConfirmedSignal, PulseResult, Venue, VenueNightlyRollup, VenueOwnerStatus, VenueWithPulse, VsTypicalComparison } from "@/types";
 import { MAP_REFRESH_MS, VENUE_DETAIL_REFRESH_MS } from "@/config/constants";
 import type { ExploreSection } from "@/lib/pulse/explore";
 
@@ -73,6 +73,7 @@ export function useVenue(id: string) {
         alternatives: VenueWithPulse[];
         newlyConfirmedSignals: ConfirmedSignal[];
         newlyUnlockedBadges: Array<{ code: BadgeCode; neighborhood: string; xpEventId: string | null }>;
+        myOwnershipStatus: VenueOwnerStatus | null;
       }>(`/api/venues/${id}`),
     refetchInterval: VENUE_DETAIL_REFRESH_MS,
   });
@@ -126,6 +127,27 @@ export function useFriends() {
     queryKey: ["friends"],
     queryFn: () => fetchJson<FriendsResponse>("/api/friends"),
     refetchInterval: MAP_REFRESH_MS,
+  });
+}
+
+export interface NeighborhoodBenchmark {
+  averageScore: number;
+  venueCount: number;
+}
+
+export interface OwnerDashboardData {
+  venue: Venue;
+  currentPulse: PulseResult;
+  vsTypical: VsTypicalComparison | null;
+  recentRollups: VenueNightlyRollup[];
+  neighborhoodBenchmark: NeighborhoodBenchmark | null;
+}
+
+export function useOwnerDashboard(venueId: string) {
+  return useQuery({
+    queryKey: ["owner-dashboard", venueId],
+    queryFn: () => fetchJson<OwnerDashboardData>(`/api/owner/venues/${venueId}/dashboard`),
+    refetchInterval: VENUE_DETAIL_REFRESH_MS,
   });
 }
 

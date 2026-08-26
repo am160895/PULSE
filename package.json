@@ -10,6 +10,8 @@
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
     "seed:real": "tsx --env-file=.env.local scripts/addRealVenues.ts",
     "seed:real2": "tsx --env-file=.env.local scripts/addRealVenuesBatch2.ts",
+    "seed:real3": "tsx --env-file=.env.local scripts/addRealVenuesBatch3.ts",
+    "seed:real4": "tsx --env-file=.env.local scripts/addRealVenuesBatch4.ts",
     "test": "vitest run"
   },
   "dependencies": {

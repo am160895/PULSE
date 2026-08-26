@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Bookmark, X } from "lucide-react";
 import type { VenueWithPulse } from "@/types";
 import { OpenStateBadge, PulseLabelBadge, ConfidenceBadge, TrendIndicator, WaitBadge } from "@/components/venues/Badges";
+import { VsTypicalBadge } from "@/components/venues/VsTypicalBadge";
 import { formatDistance } from "@/lib/geo";
 import { VENUE_TYPE_LABELS } from "@/config/constants";
 
@@ -53,6 +54,7 @@ export function VenueBottomSheet({ venue, onClose, onToggleSaved }: Props) {
               <>
                 <PulseLabelBadge label={venue.pulse.pulseLabel} />
                 <ConfidenceBadge label={venue.pulse.confidenceLabel} />
+                {venue.vsTypical && <VsTypicalBadge comparison={venue.vsTypical} />}
               </>
             )}
           </div>

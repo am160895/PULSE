@@ -5,6 +5,7 @@ import { getVenueById, listSavedVenueIds, listVenues } from "@/lib/data/reposito
 import { listVisiblePresenceForViewer } from "@/lib/data/social";
 import { computeVenueStatesBatch } from "@/lib/pulse/composeVenue";
 import { haversineDistanceMeters } from "@/lib/geo";
+import { getOwnershipRequest } from "@/lib/data/ownership";
 
 const ALTERNATIVES_RADIUS_METERS = 700;
 // computeVenueStatesBatch() still costs real Supabase round-trips (just a fixed handful
@@ -22,10 +23,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!venue) return NextResponse.json({ error: "Venue not found" }, { status: 404 });
 
   const now = new Date();
-  const [savedIds, presence, allVenues] = await Promise.all([
+  const [savedIds, presence, allVenues, myOwnershipRequest] = await Promise.all([
     listSavedVenueIds(session.profile.id),
     listVisiblePresenceForViewer(session.profile.id, now),
     listVenues(),
+    getOwnershipRequest(venue.id, session.profile.id),
   ]);
   const friendsPresent = presence.filter((p) => p.venueId === venue.id);
 
@@ -40,7 +42,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   // Score the primary venue and every candidate alternative in one batch — same total
   // round-trip cost whether there are 0 or 10 nearby candidates.
   const states = await computeVenueStatesBatch([venue, ...nearby.map((n) => n.v)], now, session.profile.id);
-  const { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, newlyConfirmedSignals, newlyUnlockedBadges } =
+  const { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, vsTypical, newlyConfirmedSignals, newlyUnlockedBadges } =
     states.get(venue.id)!;
 
   const result: VenueWithPulse = {
@@ -51,6 +53,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     openStatus,
     currentPulseStatus,
     hoursDiscrepancy,
+    vsTypical,
     isSaved: savedIds.has(venue.id),
     friendsPresent,
   };
@@ -66,6 +69,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         openStatus: alt.openStatus,
         currentPulseStatus: alt.currentPulseStatus,
         hoursDiscrepancy: alt.hoursDiscrepancy,
+        vsTypical: alt.vsTypical,
         isSaved: savedIds.has(v.id),
         distanceMeters: distance,
       };
@@ -74,5 +78,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .sort((a, b) => b.pulse.pulseScore - a.pulse.pulseScore)
     .slice(0, 3);
 
-  return NextResponse.json({ venue: result, alternatives, newlyConfirmedSignals, newlyUnlockedBadges });
+  return NextResponse.json({
+    venue: result,
+    alternatives,
+    newlyConfirmedSignals,
+    newlyUnlockedBadges,
+    myOwnershipStatus: myOwnershipRequest?.status ?? null,
+  });
 }

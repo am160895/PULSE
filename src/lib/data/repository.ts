@@ -4,6 +4,7 @@ import type {
   VenueEvent,
   VenueHourlyBaseline,
   VenueHours,
+  VenueNightlyRollup,
   VenueReport,
   VenueSignalSnapshot,
   VenueSpecialHours,
@@ -146,6 +147,21 @@ function rowToSnapshot(row: Row): VenueSignalSnapshot {
     expectedPeak:
       row.expected_peak_start == null ? null : { start: row.expected_peak_start, end: row.expected_peak_end },
     signalVersion: row.signal_version,
+  };
+}
+
+function rowToNightlyRollup(row: Row): VenueNightlyRollup {
+  return {
+    id: row.id,
+    venueId: row.venue_id,
+    nightlifeDate: row.nightlife_date,
+    nightlifeDayOfWeek: row.nightlife_day_of_week,
+    avgPulseScore: row.avg_pulse_score,
+    peakPulseScore: row.peak_pulse_score,
+    peakAt: row.peak_at,
+    sampleCount: row.sample_count,
+    reportCount: row.report_count,
+    computedAt: row.computed_at,
   };
 }
 
@@ -778,6 +794,112 @@ export async function appendSnapshotsBatch(entries: Array<{ venueId: string; res
       )
       .lt("captured_at", cutoff)
   );
+}
+
+// ---------------- historical rollups ----------------
+// venue_signal_snapshots is deliberately pruned after 12h (see appendSnapshot(sBatch)
+// above) — these functions are the durable archive on the other side of that pruning.
+// Written only by the request-triggered compute-on-read path in
+// lib/pulse/history/nightlyRollup.ts (no cron infra exists in this app).
+
+const ROLLUP_HISTORY_LOOKBACK_DAYS = 70;
+
+export async function listRecentRollupsForVenue(venueId: string, now: Date = new Date()): Promise<VenueNightlyRollup[]> {
+  const cutoff = new Date(now.getTime() - ROLLUP_HISTORY_LOOKBACK_DAYS * 24 * 3_600_000).toISOString().slice(0, 10);
+  const rows = unwrap(
+    await supabaseAdmin()
+      .from("venue_nightly_rollups")
+      .select()
+      .eq("venue_id", venueId)
+      .gte("nightlife_date", cutoff)
+      .order("nightlife_date", { ascending: false })
+  );
+  return rows.map(rowToNightlyRollup);
+}
+
+/** Batched sibling of listRecentRollupsForVenue — one round-trip for N venues instead of N. */
+export async function listRecentRollupsForVenues(venueIds: string[], now: Date = new Date()): Promise<Map<string, VenueNightlyRollup[]>> {
+  if (venueIds.length === 0) return new Map();
+  const cutoff = new Date(now.getTime() - ROLLUP_HISTORY_LOOKBACK_DAYS * 24 * 3_600_000).toISOString().slice(0, 10);
+  const rows = await fetchAllRows((from, to) =>
+    supabaseAdmin()
+      .from("venue_nightly_rollups")
+      .select("*", { count: "exact" })
+      .in("venue_id", venueIds)
+      .gte("nightlife_date", cutoff)
+      .range(from, to)
+  );
+  return groupBy(rows.map(rowToNightlyRollup), (r) => r.venueId);
+}
+
+/** venue_ids that do NOT yet have a rollup row for `nightlifeDate` — the cheap check
+ * that keeps finalizeNightlyRollupsIfNeeded's common case (nothing to do) to one query. */
+export async function getMissingRollupVenueIds(venueIds: string[], nightlifeDate: string): Promise<Set<string>> {
+  if (venueIds.length === 0) return new Set();
+  const rows: Row[] = unwrap(
+    await supabaseAdmin().from("venue_nightly_rollups").select("venue_id").in("venue_id", venueIds).eq("nightlife_date", nightlifeDate)
+  );
+  const existing = new Set(rows.map((r) => r.venue_id));
+  return new Set(venueIds.filter((id) => !existing.has(id)));
+}
+
+async function listSnapshotsInWindow(venueId: string, from: Date, to: Date): Promise<VenueSignalSnapshot[]> {
+  const rows = unwrap(
+    await supabaseAdmin()
+      .from("venue_signal_snapshots")
+      .select()
+      .eq("venue_id", venueId)
+      .gte("captured_at", from.toISOString())
+      .lt("captured_at", to.toISOString())
+  );
+  return rows.map(rowToSnapshot);
+}
+
+async function countReportsInWindow(venueId: string, from: Date, to: Date): Promise<number> {
+  const { count, error } = await supabaseAdmin()
+    .from("venue_reports")
+    .select("*", { count: "exact", head: true })
+    .eq("venue_id", venueId)
+    .gte("created_at", from.toISOString())
+    .lt("created_at", to.toISOString());
+  if (error) throw new Error(`Supabase error: ${error.message}`);
+  return count ?? 0;
+}
+
+/** Folds this venue's still-live snapshots + report count for one completed nightlife-
+ * night into a single durable rollup row. Never inserts when there's no real data
+ * (sample_count 0) — a fabricated zero-row would silently corrupt later "vs typical"
+ * averages. Idempotent: a 23505 (another concurrent request finalized the same night
+ * first) is swallowed, not thrown — the row existing is all this function promises. */
+export async function computeAndInsertNightlyRollup(
+  venueId: string,
+  nightlifeDate: string,
+  nightlifeDayOfWeek: number,
+  windowStart: Date,
+  windowEnd: Date
+): Promise<void> {
+  const [snapshots, reportCount] = await Promise.all([
+    listSnapshotsInWindow(venueId, windowStart, windowEnd),
+    countReportsInWindow(venueId, windowStart, windowEnd),
+  ]);
+  if (snapshots.length === 0) return;
+
+  const avgPulseScore = snapshots.reduce((sum, s) => sum + s.pulseScore, 0) / snapshots.length;
+  const peak = snapshots.reduce((best, s) => (s.pulseScore > best.pulseScore ? s : best));
+
+  const { error } = await supabaseAdmin()
+    .from("venue_nightly_rollups")
+    .insert({
+      venue_id: venueId,
+      nightlife_date: nightlifeDate,
+      nightlife_day_of_week: nightlifeDayOfWeek,
+      avg_pulse_score: avgPulseScore,
+      peak_pulse_score: peak.pulseScore,
+      peak_at: peak.capturedAt,
+      sample_count: snapshots.length,
+      report_count: reportCount,
+    });
+  if (error && error.code !== "23505") throw new Error(`Supabase error: ${error.message}`);
 }
 
 // ---------------- saved venues ----------------

@@ -3,6 +3,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { SupabaseQueryError } from "@/lib/supabase/unwrap";
 import { createUserWithProfile, getProfileByAuthUserId, getProfileByUsername } from "@/lib/data/social";
+import { listVerifiedOwnedVenueIds } from "@/lib/data/ownership";
 import type { Profile } from "@/types";
 
 export interface Session {
@@ -34,6 +35,23 @@ export async function getAdminSession(): Promise<Session | null> {
   const session = await getCurrentSession();
   if (!session || session.profile.role !== "ADMIN") return null;
   return session;
+}
+
+export interface OwnerSession extends Session {
+  /** VERIFIED-only venue ids — the resolved set every /api/owner/** route checks a
+   * requested venue id against. Never widened to PENDING/REJECTED/REVOKED rows. */
+  ownedVenueIds: Set<string>;
+}
+
+/** Returns null for anyone who isn't a VERIFIED owner of at least one venue. Callers
+ * still must check `ownedVenueIds.has(requestedId)` for the SPECIFIC venue in the URL —
+ * this only proves "owns something," not "owns this one." */
+export async function getOwnerSession(): Promise<OwnerSession | null> {
+  const session = await getCurrentSession();
+  if (!session) return null;
+  const ownedVenueIds = await listVerifiedOwnedVenueIds(session.profile.id);
+  if (ownedVenueIds.size === 0) return null;
+  return { ...session, ownedVenueIds };
 }
 
 const signupSchema = z.object({

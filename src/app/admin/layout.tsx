@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LayoutDashboard, MapPin, Users } from "lucide-react";
+import { LayoutDashboard, MapPin, Shield, Users } from "lucide-react";
 import { getAdminSession } from "@/lib/auth";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="font-bold text-[15px] px-2 mb-4">PULSE Admin</div>
         <AdminNavLink href="/admin" icon={<LayoutDashboard size={16} />} label="Dashboard" />
         <AdminNavLink href="/admin/venues" icon={<MapPin size={16} />} label="Venues" />
+        <AdminNavLink href="/admin/venues/claims" icon={<Shield size={16} />} label="Claims" />
         <AdminNavLink href="/admin/users" icon={<Users size={16} />} label="Users" />
         <div className="mt-auto pt-4 px-2 text-[12px] text-[var(--text-muted)]">
           {session.profile.displayName}

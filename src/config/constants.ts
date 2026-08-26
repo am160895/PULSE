@@ -171,3 +171,17 @@ export const SIGNAL_CONFIRMATION_MAX_VALUE_DELTA = 20;
 // Pulse impact messaging (§32) — thresholds for "you moved the score" vs "confidence increased".
 export const IMPACT_SCORE_DELTA_THRESHOLD = 3;
 export const IMPACT_CONFIDENCE_DELTA_THRESHOLD = 5;
+
+// ---- historical memory: nightlife-day time model + rollups ----
+
+/** Local hour a "night out" starts belonging to the NEXT calendar day — nightlife runs
+ * later than the calendar day does, so 2 AM Saturday is still Friday night. */
+export const NIGHTLIFE_DAY_BOUNDARY_HOUR = 6;
+export const ROLLUP_LOOKBACK_NIGHTS = 8;
+export const VS_TYPICAL_MIN_SAMPLE_NIGHTS = 3;
+export const VS_TYPICAL_THRESHOLDS = { muchBusier: 30, busier: 12, quieter: -12, muchQuieter: -30 } as const;
+
+// ---- ranking polish: Best Bet ----
+export const BEST_BET_MIN_SCORE = 60;
+export const BEST_BET_MAX_DISTANCE_METERS = 3000;
+export const BEST_BET_MIN_MINUTES_UNTIL_CLOSE = 60;

@@ -100,3 +100,42 @@ export function zonedDateToUtc(
   );
   return new Date(guess.getTime() + (guess.getTime() - guessInterpretedAsUtc));
 }
+
+export function formatDate(parts: Pick<ZonedDateParts, "year" | "month" | "day">): string {
+  return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
+
+/** Pure calendar-date rollback on already-extracted local y/m/d — no timezone/DST
+ * involvement at all (Date.UTC here just borrows month/year-rollover arithmetic, it is
+ * never treated as a real timezone conversion). */
+export function previousCalendarDate(parts: Pick<ZonedDateParts, "year" | "month" | "day">): { year: number; month: number; day: number } {
+  const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  d.setUTCDate(d.getUTCDate() - 1);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+export interface NightlifeDateParts extends ZonedDateParts {
+  /** Venue-LOCAL calendar date ("YYYY-MM-DD") the "night out" containing this instant
+   * belongs to — e.g. 2:00 AM Saturday is still part of Friday night. */
+  nightlifeDate: string;
+  /** Day-of-week (0=Sunday) OF nightlifeDate — not of the actual wall-clock day above. */
+  nightlifeDayOfWeek: number;
+}
+
+/**
+ * Classifies an instant into the nightlife-specific "night out" it belongs to, using a
+ * configurable local boundary hour (default 6 AM — nightlife runs later than the
+ * calendar day does). Only used by the historical-rollup subsystem (see
+ * lib/pulse/history/nightlyRollup.ts) — deliberately NOT used by hours/open-status
+ * logic, where a venue's Tuesday hours row genuinely means calendar Tuesday, or by the
+ * existing venue_hourly_baselines read path, which is keyed by calendar day and has no
+ * matching nightlife-day write path to reconcile against.
+ */
+export function nightlifeDayParts(date: Date, timeZone: string, boundaryHour = 6): NightlifeDateParts {
+  const zoned = zonedDateParts(date, timeZone);
+  if (zoned.hour >= boundaryHour) {
+    return { ...zoned, nightlifeDate: formatDate(zoned), nightlifeDayOfWeek: zoned.dayOfWeek };
+  }
+  const prev = previousCalendarDate(zoned);
+  return { ...zoned, nightlifeDate: formatDate(prev), nightlifeDayOfWeek: (zoned.dayOfWeek + 6) % 7 };
+}
