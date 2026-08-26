@@ -401,6 +401,13 @@ function groupBy<T>(rows: T[], key: (row: T) => string): Map<string, T[]> {
 }
 
 const PAGE_SIZE = 1000;
+// Capped rather than firing every remaining page at once: an uncapped Promise.all here (one
+// version of this function actually shipped that way) produced silently incomplete results
+// under load in production — plausibly a Supabase/PostgREST connection-pool limit rejecting
+// or truncating some of 20+ truly-simultaneous requests without surfacing as a hard error.
+// Never fully root-caused; capped concurrency plus the hard count check below are the
+// defense regardless of the exact mechanism.
+const MAX_CONCURRENT_PAGES = 5;
 
 /**
  * PostgREST caps a single response at a server-side max-rows limit (Supabase's default is
@@ -409,19 +416,54 @@ const PAGE_SIZE = 1000;
  * truncate rather than error, which is far worse than a visible failure: every venue whose
  * rows fell outside the first page looked like it had zero data. Found in production after
  * adding real venues pushed the total row count over the threshold for the first time.
- * Paginates with .range() until a page comes back short, accumulating everything.
+ *
+ * The first fix paginated with .range() in a fully sequential loop — correct, but 23.5k
+ * baseline rows is ~24 pages awaited one at a time, which turned into the next production
+ * regression (a 140-venue map load going from ~2s to ~10s+). An uncapped-concurrency version
+ * (fire every remaining page via one Promise.all) fixed the latency but reintroduced
+ * silent data loss under real load — worse than either prior version, since it looked fast
+ * *and* wrong. This version fetches page 1 (which also returns the true total row count, via
+ * `{count: "exact"}` on the caller's .select()), then works through the rest in capped
+ * batches, and hard-fails if the final tally doesn't match the count PostgREST itself
+ * reported — silent truncation must never again just look like "this venue has no data."
  */
 async function fetchAllRows(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  page: (from: number, to: number) => PromiseLike<{ data: any; error: any }>
+  page: (
+    from: number,
+    to: number
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ) => PromiseLike<{ data: any; error: any; count?: number | null }>
 ): Promise<Row[]> {
-  const all: Row[] = [];
-  let offset = 0;
-  for (;;) {
-    const rows: Row[] = unwrap(await page(offset, offset + PAGE_SIZE - 1));
-    all.push(...rows);
-    if (rows.length < PAGE_SIZE) break;
-    offset += PAGE_SIZE;
+  const first = await page(0, PAGE_SIZE - 1);
+  const firstRows: Row[] = unwrap(first);
+  const total = first.count;
+
+  // A short page proves there's no more data, regardless of whether count came back.
+  if (firstRows.length < PAGE_SIZE) {
+    return firstRows;
+  }
+  // A full page with no readable total is NOT proof there's no more data — it just means
+  // we can't tell. Guessing "done" here previously caused a silent under-fetch whenever
+  // PostgREST returned a full page without a usable Content-Range count under load.
+  if (total == null) {
+    throw new Error("fetchAllRows: got a full page but no total count back — cannot determine if more data exists.");
+  }
+  if (total <= PAGE_SIZE) {
+    return firstRows;
+  }
+
+  const offsets: number[] = [];
+  for (let offset = PAGE_SIZE; offset < total; offset += PAGE_SIZE) offsets.push(offset);
+
+  const all = firstRows.slice();
+  for (let i = 0; i < offsets.length; i += MAX_CONCURRENT_PAGES) {
+    const chunk = offsets.slice(i, i + MAX_CONCURRENT_PAGES);
+    const results = await Promise.all(chunk.map((offset) => page(offset, offset + PAGE_SIZE - 1).then((r) => unwrap(r))));
+    for (const rows of results) all.push(...rows);
+  }
+
+  if (all.length !== total) {
+    throw new Error(`fetchAllRows: expected ${total} rows but got ${all.length} — a page silently returned incomplete data.`);
   }
   return all;
 }
@@ -433,7 +475,7 @@ async function fetchAllRows(
 export async function listReportsForVenues(venueIds: string[]): Promise<Map<string, VenueReport[]>> {
   if (venueIds.length === 0) return new Map();
   const rows = await fetchAllRows((from, to) =>
-    supabaseAdmin().from("venue_reports").select().in("venue_id", venueIds).range(from, to)
+    supabaseAdmin().from("venue_reports").select("*", { count: "exact" }).in("venue_id", venueIds).range(from, to)
   );
   return groupBy(rows.map(rowToReport), (r) => r.venueId);
 }
@@ -514,7 +556,7 @@ export async function listBaselinesForVenues(venueIds: string[]): Promise<Map<st
   // The one most likely to actually exceed PAGE_SIZE: up to 168 rows per venue (7 days x
   // 24 hours), so this hits 1000 rows at only ~6 venues in the batch.
   const rows = await fetchAllRows((from, to) =>
-    supabaseAdmin().from("venue_hourly_baselines").select().in("venue_id", venueIds).range(from, to)
+    supabaseAdmin().from("venue_hourly_baselines").select("*", { count: "exact" }).in("venue_id", venueIds).range(from, to)
   );
   return groupBy(rows.map(rowToBaseline), (b) => b.venueId);
 }
@@ -527,7 +569,7 @@ export async function listEventsForVenue(venueId: string): Promise<VenueEvent[]>
 export async function listEventsForVenues(venueIds: string[]): Promise<Map<string, VenueEvent[]>> {
   if (venueIds.length === 0) return new Map();
   const rows = await fetchAllRows((from, to) =>
-    supabaseAdmin().from("venue_events").select().in("venue_id", venueIds).range(from, to)
+    supabaseAdmin().from("venue_events").select("*", { count: "exact" }).in("venue_id", venueIds).range(from, to)
   );
   return groupBy(rows.map(rowToEvent), (e) => e.venueId);
 }
@@ -549,7 +591,12 @@ export async function listSnapshotHistoryForVenues(
   if (venueIds.length === 0) return new Map();
   const cutoff = new Date(Date.now() - sinceMinutesAgo * 60_000).toISOString();
   const rows = await fetchAllRows((from, to) =>
-    supabaseAdmin().from("venue_signal_snapshots").select().in("venue_id", venueIds).gte("captured_at", cutoff).range(from, to)
+    supabaseAdmin()
+      .from("venue_signal_snapshots")
+      .select("*", { count: "exact" })
+      .in("venue_id", venueIds)
+      .gte("captured_at", cutoff)
+      .range(from, to)
   );
   return groupBy(rows.map(rowToSnapshot), (s) => s.venueId);
 }
