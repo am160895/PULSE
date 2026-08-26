@@ -10,6 +10,8 @@ import {
 } from "@/lib/data/social";
 import { PRESENCE_MAX_TIMEOUT_MINUTES } from "@/config/constants";
 import type { PresencePreferences, PresenceStatus } from "@/types";
+import { awardXpForPresence } from "@/lib/gamification/xp";
+import { evaluateBadges } from "@/lib/gamification/badges";
 
 // Settings > Privacy exposes three independent toggles, one per presence status — sharing
 // AT_VENUE must not silently permit NEARBY/RECENTLY_HERE (and vice versa) just because one
@@ -71,7 +73,22 @@ export async function POST(request: Request) {
     timeoutMinutes: parsed.data.timeoutMinutes ?? preferences.presenceTimeoutMinutes,
   });
 
-  return NextResponse.json({ ok: true, presence: event });
+  // Only "I'm actually at this venue" earns XP — HEADING_THERE/NEARBY/RECENTLY_HERE are
+  // weaker, unverifiable-by-nature signals the spec doesn't reward.
+  if (parsed.data.status !== "AT_VENUE") {
+    return NextResponse.json({ ok: true, presence: event, xp: null, badgesUnlocked: [] });
+  }
+
+  const now = new Date();
+  const xp = await awardXpForPresence(session.profile.id, venue, now);
+  const badgesUnlocked = xp.awarded ? await evaluateBadges(session.profile.id, now) : [];
+
+  return NextResponse.json({
+    ok: true,
+    presence: event,
+    xp: { awarded: xp.awarded, xpAmount: xp.xpAmount, totalXp: xp.totalXp, level: xp.level, leveledUp: xp.leveledUp },
+    badgesUnlocked,
+  });
 }
 
 export async function DELETE() {

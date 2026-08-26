@@ -11,8 +11,20 @@ export async function GET() {
   const now = new Date();
   const savedIds = await listSavedVenueIds(session.profile.id);
   const savedVenues = await getVenuesByIds([...savedIds]);
-  const states = await computeVenueStatesBatch(savedVenues, now);
-  const venues: VenueWithPulse[] = savedVenues.map((venue) => ({ ...venue, ...states.get(venue.id)!, isSaved: true }));
+  const states = await computeVenueStatesBatch(savedVenues, now, session.profile.id);
+  const venues: VenueWithPulse[] = savedVenues.map((venue) => {
+    const state = states.get(venue.id)!;
+    return {
+      ...venue,
+      pulse: state.pulse,
+      openState: state.openState,
+      coverageState: state.coverageState,
+      openStatus: state.openStatus,
+      currentPulseStatus: state.currentPulseStatus,
+      hoursDiscrepancy: state.hoursDiscrepancy,
+      isSaved: true,
+    };
+  });
 
   return NextResponse.json({ venues });
 }

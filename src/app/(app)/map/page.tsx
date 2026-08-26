@@ -12,7 +12,8 @@ export default function MapPage() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [activeFilters, setActiveFilters] = useState<Set<MapFilter>>(new Set());
+  // OPEN_NOW is default-on during nightlife browsing (spec §22).
+  const [activeFilters, setActiveFilters] = useState<Set<MapFilter>>(new Set(["OPEN_NOW"]));
   const [coverage, setCoverage] = useState<CoverageMode>("NOW");
   const invalidate = useInvalidateVenue();
 
@@ -21,31 +22,53 @@ export default function MapPage() {
 
   const venues = useMemo(() => {
     const base = query.trim() ? searchVenues ?? [] : boundsVenues ?? [];
-    if (activeFilters.size === 0) return base;
+    const filtered =
+      activeFilters.size === 0
+        ? base
+        : base.filter((v) => {
+            for (const f of activeFilters) {
+              if (f === "HOT" && v.pulse.pulseLabel !== "HOT_NOW") return false;
+              if (f === "RISING" && v.pulse.trend !== "RISING" && v.pulse.trend !== "RISING_FAST") return false;
+              if (f === "FRIENDS" && (v.friendsPresent?.length ?? 0) === 0) return false;
+              if (f === "NO_LINE" && v.pulse.waitEstimate && (v.pulse.waitEstimate.maxMinutes ?? 99) > 5) return false;
+              if (f === "OPEN_NOW" && v.openState !== "OPEN" && v.openState !== "CLOSING_SOON") return false;
+              // Closed-but-opening-later — more useful than simply hiding every closed
+              // venue (spec §23).
+              if (f === "LATER_TONIGHT" && !(v.currentPulseStatus === "CLOSED" && v.openStatus.nextOpenAt)) return false;
+              if (f === "BAR" && v.venueType !== "BAR") return false;
+              if (f === "CLUB" && v.venueType !== "CLUB") return false;
+              if (f === "ROOFTOP" && v.venueType !== "ROOFTOP") return false;
+              if (f === "LIVE_MUSIC" && v.venueType !== "LIVE_MUSIC") return false;
+            }
+            return true;
+          });
 
-    return base.filter((v) => {
-      for (const f of activeFilters) {
-        if (f === "HOT" && v.pulse.pulseLabel !== "HOT_NOW") return false;
-        if (f === "RISING" && v.pulse.trend !== "RISING" && v.pulse.trend !== "RISING_FAST") return false;
-        if (f === "FRIENDS" && (v.friendsPresent?.length ?? 0) === 0) return false;
-        if (f === "NO_LINE" && v.pulse.waitEstimate && (v.pulse.waitEstimate.maxMinutes ?? 99) > 5) return false;
-        if (f === "OPEN_NOW" && v.openState !== "OPEN" && v.openState !== "CLOSING_SOON") return false;
-        if (f === "BAR" && v.venueType !== "BAR") return false;
-        if (f === "CLUB" && v.venueType !== "CLUB") return false;
-        if (f === "ROOFTOP" && v.venueType !== "ROOFTOP") return false;
-        if (f === "LIVE_MUSIC" && v.venueType !== "LIVE_MUSIC") return false;
-      }
-      return true;
+    if (!activeFilters.has("LATER_TONIGHT")) return filtered;
+    // Soonest-opening-first is the whole point of this filter — a flat unsorted list of
+    // "closed, opens sometime later" venues wouldn't be meaningfully more useful than no
+    // list at all.
+    return [...filtered].sort((a, b) => {
+      const aTime = a.openStatus.nextOpenAt ? new Date(a.openStatus.nextOpenAt).getTime() : Infinity;
+      const bTime = b.openStatus.nextOpenAt ? new Date(b.openStatus.nextOpenAt).getTime() : Infinity;
+      return aTime - bTime;
     });
   }, [boundsVenues, searchVenues, query, activeFilters]);
 
   const selectedVenue = venues.find((v) => v.id === selectedId) ?? null;
 
+  // OPEN_NOW and LATER_TONIGHT are opposite views of the map (currently open vs
+  // currently closed) — active together they'd always show nothing, so selecting one
+  // clears the other rather than silently producing an empty map.
   function toggleFilter(f: MapFilter) {
     setActiveFilters((prev) => {
       const next = new Set(prev);
-      if (next.has(f)) next.delete(f);
-      else next.add(f);
+      if (next.has(f)) {
+        next.delete(f);
+      } else {
+        if (f === "OPEN_NOW") next.delete("LATER_TONIGHT");
+        if (f === "LATER_TONIGHT") next.delete("OPEN_NOW");
+        next.add(f);
+      }
       return next;
     });
   }

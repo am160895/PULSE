@@ -6,18 +6,20 @@ import { useExplore } from "@/hooks/api";
 import { PulseLabelBadge, TrendIndicator, WaitBadge } from "@/components/venues/Badges";
 import { LoadingDots, EmptyState } from "@/components/ui/States";
 import { VENUE_TYPE_LABELS } from "@/config/constants";
+import { getUserLocationOnce } from "@/lib/geo/userLocation";
 
 export default function ExplorePage() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const { data: sections, isLoading, isError, refetch } = useExplore(userLocation);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
-      { timeout: 4000 }
-    );
+    let cancelled = false;
+    getUserLocationOnce().then((loc) => {
+      if (loc && !cancelled) setUserLocation(loc);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

@@ -92,13 +92,47 @@ export interface Profile {
   updatedAt: string;
 }
 
+export type HoursSource = "SEED" | "ADMIN" | "VENUE_OWNER" | "GOOGLE_PLACES";
+
 export interface VenueHours {
   id: string;
   venueId: string;
   dayOfWeek: number; // 0 = Sunday
-  openTime: string; // "HH:mm"
-  closeTime: string; // "HH:mm", may be < openTime (crosses midnight)
+  isClosed: boolean;
+  openTime: string | null; // "HH:mm"; null iff isClosed
+  closeTime: string | null; // "HH:mm", may be < openTime (crosses midnight); null iff isClosed
+  source: HoursSource;
+  lastVerifiedAt: string | null;
 }
+
+/** A one-date override that wins entirely over that date's regular VenueHours row(s) —
+ * holiday closures, private events, late openings. `specialDate` is venue-LOCAL. */
+export interface VenueSpecialHours {
+  id: string;
+  venueId: string;
+  specialDate: string; // "YYYY-MM-DD", venue-local
+  isClosed: boolean;
+  openTime: string | null;
+  closeTime: string | null;
+  reason: string | null;
+  source: HoursSource;
+  lastVerifiedAt: string | null;
+}
+
+/** The full "is this venue open" answer for UI display — see lib/venues/getVenueOpenStatus.ts. */
+export interface VenueOpenStatus {
+  isOpen: boolean;
+  status: VenueOpenState;
+  closesAt: string | null; // ISO instant; set iff isOpen
+  opensAt: string | null; // ISO instant; set iff isOpen
+  nextOpenAt: string | null; // ISO instant of the next future opening; null iff isOpen/UNKNOWN/PERMANENTLY_CLOSED
+  hoursConfidence: ConfidenceLabel;
+  displayText: string;
+}
+
+/** LIVE = currently open, showing a real-time score. CLOSED = don't show a live-looking
+ * score at all, regardless of what the raw pulseScore number happens to compute to. */
+export type CurrentPulseStatus = "LIVE" | "CLOSED";
 
 export interface Venue {
   id: string;
@@ -247,6 +281,91 @@ export interface UserTrustScore {
   updatedAt: string;
 }
 
+// ---- gamification (PULSE XP) ----
+// XP is deliberately kept separate from trust (above): XP is a visible progression
+// mechanic, trust is an internal data-quality multiplier never shown to users. See
+// src/lib/gamification/.
+
+export type XpRewardType =
+  | "I_AM_HERE"
+  | "CROWD_REPORT"
+  | "WAIT_REPORT"
+  | "ENERGY_REPORT"
+  | "LIVE_NOTE"
+  | "FIRST_REPORT_TONIGHT"
+  | "SIGNAL_CONFIRMED"
+  | "VENUE_CORRECTION";
+
+export type BadgeCode =
+  | "FIRST_SIGNAL"
+  | "TREND_SPOTTER"
+  | "LINE_SAVER"
+  | "NIGHT_OWL"
+  | "ON_THE_PULSE"
+  | "CITY_SCOUT"
+  | "EARLY_SIGNAL"
+  | "NEIGHBORHOOD_INSIDER";
+
+export interface XpEvent {
+  id: string;
+  userId: string;
+  rewardType: XpRewardType;
+  xpAmount: number;
+  sourceId: string;
+  venueId: string | null;
+  neighborhood: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface UserProgress {
+  userId: string;
+  totalXp: number;
+  updatedAt: string;
+}
+
+export interface UserNeighborhoodProgress {
+  userId: string;
+  neighborhood: string;
+  xp: number;
+  updatedAt: string;
+}
+
+export interface BadgeDefinition {
+  code: BadgeCode;
+  name: string;
+  description: string;
+  motif: string;
+  sortOrder: number;
+}
+
+export interface UserBadge {
+  userId: string;
+  badgeCode: BadgeCode;
+  neighborhood: string; // "" for non-neighborhood-scoped badges
+  awardedAt: string;
+  xpEventId: string | null;
+}
+
+/** A delayed-accuracy confirmation newly awarded THIS request — see
+ * lib/gamification/consensus.ts. Surfaced by /api/venues and /api/venues/[id] so the
+ * client can fire an "ACCURATE SIGNAL" toast without a dedicated polling endpoint. */
+export interface ConfirmedSignal {
+  reportId: string;
+  venueId: string;
+  xpAwarded: number;
+}
+
+export type ContributorLevelName = "EXPLORER" | "SCOUT" | "INSIDER" | "LOCAL" | "PULSE_PRO";
+
+export interface ContributorLevel {
+  name: ContributorLevelName;
+  label: string;
+  minXp: number;
+  /** null for the top level — there's nothing to progress toward. */
+  nextLevelXp: number | null;
+}
+
 // ---- computed / API-facing shapes (not persisted as-is) ----
 
 export interface PulseReasonComponent {
@@ -276,6 +395,14 @@ export interface VenueWithPulse extends Venue {
   /** LIVE/RECENT/TYPICAL come from pulse.freshness; DIRECTORY means no PULSE data exists
    * at all for this venue and the UI must not show a fabricated score — see lib/venues/coverageState.ts. */
   coverageState: VenueCoverageState;
+  /** Richer than openState alone — closesAt/opensAt/nextOpenAt/confidence for display. */
+  openStatus: VenueOpenStatus;
+  /** Thin derivation of openState — see lib/venues/currentPulseStatus.ts. UI must branch on
+   * this (not pulseScore) before deciding whether to show a live-looking score at all. */
+  currentPulseStatus: CurrentPulseStatus;
+  /** True when a verified-nearby report arrived recently at a venue that's currently
+   * CLOSED per its hours — flags for review, never auto-reopens the venue. */
+  hoursDiscrepancy: boolean;
   distanceMeters?: number;
   friendsPresent?: PresenceSummary[];
   isSaved?: boolean;

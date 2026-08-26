@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { deriveVenueOpenState } from "@/lib/venues/openState";
 import { deriveCoverageState } from "@/lib/venues/coverageState";
-import { fridayNightNow } from "./fixtures";
+import { fridayNightNow, makeHours } from "./fixtures";
 
-const OPEN_ALL_WEEK = [0, 1, 2, 3, 4, 5, 6].map((d) => ({ id: `h${d}`, venueId: "v", dayOfWeek: d, openTime: "00:00", closeTime: "23:59" }));
+const OPEN_ALL_WEEK = [0, 1, 2, 3, 4, 5, 6].map((d) => makeHours({ id: `h${d}`, venueId: "v", dayOfWeek: d, openTime: "00:00", closeTime: "23:59" }));
 
 describe("deriveVenueOpenState", () => {
   it("reports PERMANENTLY_CLOSED regardless of hours", () => {
@@ -23,14 +23,14 @@ describe("deriveVenueOpenState", () => {
   });
 
   it("reports CLOSED outside the venue's hours", () => {
-    const dayHours = [{ id: "h", venueId: "v", dayOfWeek: fridayNightNow().getDay(), openTime: "09:00", closeTime: "10:00" }];
+    const dayHours = [makeHours({ id: "h", venueId: "v", dayOfWeek: fridayNightNow().getDay(), openTime: "09:00", closeTime: "10:00" })];
     expect(deriveVenueOpenState(dayHours, fridayNightNow(), "America/New_York")).toBe("CLOSED");
   });
 
   it("reports CLOSING_SOON within 30 minutes of close, and OPEN otherwise", () => {
     const now = fridayNightNow(); // 23:30
-    const closingSoonHours = [{ id: "h", venueId: "v", dayOfWeek: now.getDay(), openTime: "20:00", closeTime: "23:45" }];
-    const stillOpenHours = [{ id: "h", venueId: "v", dayOfWeek: now.getDay(), openTime: "20:00", closeTime: "02:00" }];
+    const closingSoonHours = [makeHours({ id: "h", venueId: "v", dayOfWeek: now.getDay(), openTime: "20:00", closeTime: "23:45" })];
+    const stillOpenHours = [makeHours({ id: "h", venueId: "v", dayOfWeek: now.getDay(), openTime: "20:00", closeTime: "02:00" })];
     expect(deriveVenueOpenState(closingSoonHours, now, "America/New_York")).toBe("CLOSING_SOON");
     expect(deriveVenueOpenState(stillOpenHours, now, "America/New_York")).toBe("OPEN");
   });

@@ -4,11 +4,14 @@ import { useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import type { CoverageMode } from "@/hooks/api";
 
-export type MapFilter = "HOT" | "RISING" | "FRIENDS" | "NO_LINE" | "OPEN_NOW" | "BAR" | "CLUB" | "ROOFTOP" | "LIVE_MUSIC";
+export type MapFilter = "HOT" | "RISING" | "FRIENDS" | "NO_LINE" | "OPEN_NOW" | "LATER_TONIGHT" | "BAR" | "CLUB" | "ROOFTOP" | "LIVE_MUSIC";
 
 // Primary layer stays on screen at all times (§11: reduce filter overload); everything
-// else lives behind "More" so the first screen isn't a wall of chips.
+// else lives behind "More" so the first screen isn't a wall of chips. OPEN_NOW is
+// default-on during nightlife browsing (spec §22) — a default-on filter with no visible
+// indicator would be confusing, so it lives here rather than behind "More".
 const PRIMARY_FILTERS: { key: MapFilter; label: string }[] = [
+  { key: "OPEN_NOW", label: "Open now" },
   { key: "HOT", label: "Hot now" },
   { key: "RISING", label: "Rising" },
   { key: "NO_LINE", label: "No line" },
@@ -16,7 +19,7 @@ const PRIMARY_FILTERS: { key: MapFilter; label: string }[] = [
 ];
 
 const SECONDARY_FILTERS: { key: MapFilter; label: string }[] = [
-  { key: "OPEN_NOW", label: "Open now" },
+  { key: "LATER_TONIGHT", label: "Later tonight" },
   { key: "BAR", label: "Bars" },
   { key: "CLUB", label: "Clubs" },
   { key: "ROOFTOP", label: "Rooftops" },

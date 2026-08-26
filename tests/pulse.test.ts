@@ -5,7 +5,7 @@ import { calculateConfidenceSignal } from "@/lib/pulse/signals/confidence";
 import { calculateTrendSignal } from "@/lib/pulse/signals/trend";
 import { reportTimeDecay } from "@/lib/pulse/signals/liveReports";
 import type { VenueHourlyBaseline, VenueReport, VenueSignalSnapshot } from "@/types";
-import { makeReport, makeVenue, fridayNightNow, tuesdayAfternoonNow } from "./fixtures";
+import { makeHours, makeReport, makeVenue, fridayNightNow, tuesdayAfternoonNow } from "./fixtures";
 
 function baselineFor(venueId: string, activity: number): VenueHourlyBaseline[] {
   const rows: VenueHourlyBaseline[] = [];
@@ -26,12 +26,14 @@ function baselineFor(venueId: string, activity: number): VenueHourlyBaseline[] {
   return rows;
 }
 
+const defaultVenue = makeVenue();
 const baseInput = {
-  venue: makeVenue(),
+  venue: defaultVenue,
   events: [],
   friendsPresentCount: 0,
   history: [] as VenueSignalSnapshot[],
   trustScores: new Map<string, number>(),
+  effectiveHours: defaultVenue.hours,
 };
 
 describe("calculatePulseScore", () => {
@@ -63,9 +65,16 @@ describe("calculatePulseScore", () => {
   it("shows closed venues at 0 regardless of a strong historical baseline", () => {
     const now = fridayNightNow();
     const closedVenue = makeVenue({
-      hours: [{ id: "h", venueId: "venue-1", dayOfWeek: now.getDay(), openTime: "09:00", closeTime: "10:00" }],
+      hours: [makeHours({ id: "h", venueId: "venue-1", dayOfWeek: now.getDay(), openTime: "09:00", closeTime: "10:00" })],
     });
-    const result = calculatePulseScore({ ...baseInput, venue: closedVenue, now, reports: [], baselines: baselineFor("venue-1", 95) });
+    const result = calculatePulseScore({
+      ...baseInput,
+      venue: closedVenue,
+      now,
+      reports: [],
+      baselines: baselineFor("venue-1", 95),
+      effectiveHours: closedVenue.hours,
+    });
     expect(result.pulseScore).toBe(0);
   });
 

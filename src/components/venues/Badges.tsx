@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowDownRight, ArrowUp, ArrowUpRight, Minus } from "lucide-react";
-import type { ConfidenceLabel, FreshnessLabel, PulseLabel, TrendDirection, VenueOpenState, WaitEstimate } from "@/types";
+import type { ConfidenceLabel, FreshnessLabel, PulseLabel, TrendDirection, VenueOpenState, VenueOpenStatus, WaitEstimate } from "@/types";
 import { PULSE_LABEL_TEXT } from "@/lib/pulse/labels";
 import { formatWaitEstimate } from "@/lib/pulse/waitEstimate";
 import { VENUE_OPEN_STATE_TEXT } from "@/lib/venues/openState";
@@ -88,6 +88,39 @@ const SCORE_COLOR: Record<string, string> = {
   moderate: "var(--text)",
   quiet: "var(--text-muted)",
 };
+
+function formatVenueLocalTime(iso: string, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
+}
+
+/**
+ * Renders in place of a live score whenever currentPulseStatus is CLOSED — a closed venue
+ * must never show a normal-looking Pulse Score (spec §22/§27), even one that happens to
+ * compute to 0. Keeps the historical "typical peak" context (also computed while closed,
+ * see calculatePulseScore.ts) rather than just going blank.
+ */
+export function ClosedVenueStatus({
+  openStatus,
+  expectedPeak,
+  timeZone,
+}: {
+  openStatus: VenueOpenStatus;
+  expectedPeak: { start: string; end: string } | null;
+  timeZone: string;
+}) {
+  return (
+    <div className="mb-4 py-3 border-y border-[var(--border)]">
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        <span className="badge badge-low">{openStatus.displayText}</span>
+      </div>
+      {expectedPeak && (
+        <p className="text-[13px] text-[var(--text-secondary)]">
+          Typical peak: {formatVenueLocalTime(expectedPeak.start, timeZone)}–{formatVenueLocalTime(expectedPeak.end, timeZone)}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function PulseScoreDisplay({ score, label }: { score: number; label: PulseLabel }) {
   const color = SCORE_COLOR[markerClassForLabel(label)];

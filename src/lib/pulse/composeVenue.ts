@@ -1,4 +1,4 @@
-import type { PulseResult, Venue, VenueCoverageState, VenueHourlyBaseline, VenueOpenState } from "@/types";
+import type { ConfirmedSignal, CurrentPulseStatus, PulseResult, Venue, VenueCoverageState, VenueHourlyBaseline, VenueOpenState, VenueOpenStatus } from "@/types";
 import {
   appendSnapshot,
   appendSnapshotsBatch,
@@ -10,32 +10,42 @@ import {
   listReportsForVenues,
   listSnapshotHistory,
   listSnapshotHistoryForVenues,
+  listSpecialHoursForVenue,
+  listSpecialHoursForVenues,
 } from "@/lib/data/repository";
 import { allTrustScoresMap, countAnyPresentAtVenue, countPresentAtVenues } from "@/lib/data/social";
 import { calculatePulseScore } from "./calculatePulseScore";
 import { deriveVenueOpenState } from "@/lib/venues/openState";
 import { deriveCoverageState } from "@/lib/venues/coverageState";
+import { buildEffectiveHours } from "@/lib/venues/specialHours";
+import { getVenueOpenStatus } from "@/lib/venues/getVenueOpenStatus";
+import { currentPulseStatusFor } from "@/lib/venues/currentPulseStatus";
+import { HOURS_DISCREPANCY_WINDOW_MINUTES } from "@/config/constants";
+import { evaluateOwnReportsForConsensus } from "@/lib/gamification/consensus";
+import { evaluateBadges, type BadgeUnlock } from "@/lib/gamification/badges";
 
 const SNAPSHOT_MIN_INTERVAL_MINUTES = 2;
 
 async function fetchSignals(venue: Venue, now: Date) {
-  const [reports, baselines, events, history, friendsPresentCount, trustScores] = await Promise.all([
+  const [reports, baselines, events, history, friendsPresentCount, trustScores, specialHours] = await Promise.all([
     listReportsForVenue(venue.id),
     listBaselinesForVenue(venue.id),
     listEventsForVenue(venue.id),
     listSnapshotHistory(venue.id),
     countAnyPresentAtVenue(venue.id, now),
     allTrustScoresMap(),
+    listSpecialHoursForVenue(venue.id, now),
   ]);
-  return { reports, baselines, events, history, friendsPresentCount, trustScores };
+  return { reports, baselines, events, history, friendsPresentCount, trustScores, specialHours };
 }
 
 async function scoreAndMaybeSnapshot(
   venue: Venue,
   now: Date,
-  signals: Awaited<ReturnType<typeof fetchSignals>>
+  signals: Awaited<ReturnType<typeof fetchSignals>>,
+  effectiveHours: Venue["hours"]
 ): Promise<PulseResult> {
-  const result = calculatePulseScore({ venue, now, ...signals });
+  const result = calculatePulseScore({ venue, now, ...signals, effectiveHours });
 
   const last = [...signals.history].sort(
     (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime()
@@ -54,39 +64,84 @@ async function scoreAndMaybeSnapshot(
 /** The one place API routes go to get a venue's current score — keeps snapshot-append throttling in one spot. */
 export async function computePulseForVenue(venue: Venue, now: Date): Promise<PulseResult> {
   const signals = await fetchSignals(venue, now);
-  return scoreAndMaybeSnapshot(venue, now, signals);
+  const effectiveHours = buildEffectiveHours(venue.hours, signals.specialHours, now, venue.timezone);
+  return scoreAndMaybeSnapshot(venue, now, signals, effectiveHours);
 }
 
 export interface VenueState {
   pulse: PulseResult;
   openState: VenueOpenState;
   coverageState: VenueCoverageState;
+  openStatus: VenueOpenStatus;
+  currentPulseStatus: CurrentPulseStatus;
+  hoursDiscrepancy: boolean;
+  /** Non-empty only when evaluateOwnReportsForConsensus (called when a viewerId is
+   * given) actually awarded a new SIGNAL_CONFIRMED event THIS call — the UI uses this to
+   * fire the "ACCURATE SIGNAL" contribution-success toast. */
+  newlyConfirmedSignals: ConfirmedSignal[];
+  /** Badges newly unlocked as a side effect of a fresh confirmation above — TREND_SPOTTER
+   * and EARLY_SIGNAL both depend entirely on SIGNAL_CONFIRMED events existing, so they can
+   * only ever unlock from this path (badges from I'm-Here/report submissions are evaluated
+   * separately, right where those XP awards happen). Always [] when newlyConfirmedSignals
+   * is empty — badges are only re-checked when there's genuinely new ledger activity. */
+  newlyUnlockedBadges: BadgeUnlock[];
+}
+
+function deriveDiscrepancy(
+  currentPulseStatus: CurrentPulseStatus,
+  reports: Awaited<ReturnType<typeof fetchSignals>>["reports"],
+  now: Date
+): boolean {
+  if (currentPulseStatus !== "CLOSED") return false;
+  return reports.some(
+    (r) => r.isVerifiedNearby && (now.getTime() - new Date(r.createdAt).getTime()) / 60_000 <= HOURS_DISCREPANCY_WINDOW_MINUTES
+  );
 }
 
 /** Everything needed to build a VenueWithPulse for the API layer, in one call — fetches each
  * signal exactly once (computePulseForVenue alone would refetch baselines a second time to
- * derive coverageState, doubling a now-real network round-trip for no reason). */
-export async function computeVenueState(venue: Venue, now: Date): Promise<VenueState> {
+ * derive coverageState, doubling a now-real network round-trip for no reason).
+ *
+ * `viewerId`, when given, also evaluates whether any of the viewer's own recent reports at
+ * this venue were just directionally confirmed by the crowd (see
+ * lib/gamification/consensus.ts) — the delayed-accuracy-reward mechanism. Omit it for
+ * unauthenticated/system callers that have no "viewer" to reward. */
+export async function computeVenueState(venue: Venue, now: Date, viewerId?: string): Promise<VenueState> {
   const signals = await fetchSignals(venue, now);
-  const pulse = await scoreAndMaybeSnapshot(venue, now, signals);
-  const openState = deriveVenueOpenState(venue.hours, now, venue.timezone, venue.businessStatus);
+  const effectiveHours = buildEffectiveHours(venue.hours, signals.specialHours, now, venue.timezone);
+  const pulse = await scoreAndMaybeSnapshot(venue, now, signals, effectiveHours);
+  const openState = deriveVenueOpenState(effectiveHours, now, venue.timezone, venue.businessStatus);
   const coverageState = deriveCoverageState((signals.baselines as VenueHourlyBaseline[]).length > 0, pulse.freshness);
-  return { pulse, openState, coverageState };
+  const openStatus = getVenueOpenStatus(venue.hours, signals.specialHours, now, venue.timezone, venue.businessStatus);
+  const currentPulseStatus = currentPulseStatusFor(openState);
+  const hoursDiscrepancy = deriveDiscrepancy(currentPulseStatus, signals.reports, now);
+
+  const newlyConfirmedSignals = viewerId
+    ? await evaluateOwnReportsForConsensus(viewerId, venue, signals.reports, now, pulse.trend)
+    : [];
+  const newlyUnlockedBadges = newlyConfirmedSignals.length > 0 ? await evaluateBadges(viewerId!, now) : [];
+
+  return { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, newlyConfirmedSignals, newlyUnlockedBadges };
 }
 
 /**
- * Batched sibling of computeVenueState — scores N venues with ~8 total Supabase round-trips
- * instead of ~6*N. Once each venue's signals cost a real network call instead of a free
+ * Batched sibling of computeVenueState — scores N venues with ~9 total Supabase round-trips
+ * instead of ~7*N. Once each venue's signals cost a real network call instead of a free
  * in-memory lookup (post-Supabase-migration), scoring every venue visible on the map one at
  * a time made the initial map load scale directly with venue count — 140 venues meant ~840
  * individual requests, observed taking 20+ seconds in production. Use this for any endpoint
  * that scores a list of venues at once (map bounds, explore, saved, nearby-alternatives);
- * keep computeVenueState/computePulseForVenue for genuine single-venue call sites (venue
- * detail page, report submission) where there's nothing to batch against.
+ * keep computeVenueState/computePulseForVenue for genuine single-venue call sites where
+ * there's nothing to batch against.
+ *
+ * `viewerId`, when given, evaluates delayed-accuracy consensus for every venue in the
+ * batch — cheap, since each venue's reports are already fetched for scoring regardless
+ * (see lib/gamification/consensus.ts). This is what lets browsing the map itself resolve
+ * a pending confirmation, not just revisiting one venue's detail page.
  */
-export async function computeVenueStatesBatch(venues: Venue[], now: Date): Promise<Map<string, VenueState>> {
+export async function computeVenueStatesBatch(venues: Venue[], now: Date, viewerId?: string): Promise<Map<string, VenueState>> {
   const ids = venues.map((v) => v.id);
-  const [reportsByVenue, baselinesByVenue, eventsByVenue, historyByVenue, presenceByVenue, trustScores] =
+  const [reportsByVenue, baselinesByVenue, eventsByVenue, historyByVenue, presenceByVenue, trustScores, specialHoursByVenue] =
     await Promise.all([
       listReportsForVenues(ids),
       listBaselinesForVenues(ids),
@@ -94,6 +149,7 @@ export async function computeVenueStatesBatch(venues: Venue[], now: Date): Promi
       listSnapshotHistoryForVenues(ids),
       countPresentAtVenues(ids, now),
       allTrustScoresMap(),
+      listSpecialHoursForVenues(ids, now),
     ]);
 
   const snapshotsToWrite: Array<{ venueId: string; result: PulseResult }> = [];
@@ -105,8 +161,10 @@ export async function computeVenueStatesBatch(venues: Venue[], now: Date): Promi
     const events = eventsByVenue.get(venue.id) ?? [];
     const history = historyByVenue.get(venue.id) ?? [];
     const friendsPresentCount = presenceByVenue.get(venue.id) ?? 0;
+    const specialHours = specialHoursByVenue.get(venue.id) ?? [];
+    const effectiveHours = buildEffectiveHours(venue.hours, specialHours, now, venue.timezone);
 
-    const pulse = calculatePulseScore({ venue, now, reports, baselines, events, friendsPresentCount, history, trustScores });
+    const pulse = calculatePulseScore({ venue, now, reports, baselines, events, friendsPresentCount, history, trustScores, effectiveHours });
 
     const last = [...history].sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())[0];
     const minutesSinceLast = last ? (now.getTime() - new Date(last.capturedAt).getTime()) / 60_000 : Infinity;
@@ -114,9 +172,25 @@ export async function computeVenueStatesBatch(venues: Venue[], now: Date): Promi
       snapshotsToWrite.push({ venueId: venue.id, result: pulse });
     }
 
-    const openState = deriveVenueOpenState(venue.hours, now, venue.timezone, venue.businessStatus);
+    const openState = deriveVenueOpenState(effectiveHours, now, venue.timezone, venue.businessStatus);
     const coverageState = deriveCoverageState(baselines.length > 0, pulse.freshness);
-    states.set(venue.id, { pulse, openState, coverageState });
+    const openStatus = getVenueOpenStatus(venue.hours, specialHours, now, venue.timezone, venue.businessStatus);
+    const currentPulseStatus = currentPulseStatusFor(openState);
+    const hoursDiscrepancy = deriveDiscrepancy(currentPulseStatus, reports, now);
+
+    const newlyConfirmedSignals = viewerId ? await evaluateOwnReportsForConsensus(viewerId, venue, reports, now, pulse.trend) : [];
+    const newlyUnlockedBadges = newlyConfirmedSignals.length > 0 ? await evaluateBadges(viewerId!, now) : [];
+
+    states.set(venue.id, {
+      pulse,
+      openState,
+      coverageState,
+      openStatus,
+      currentPulseStatus,
+      hoursDiscrepancy,
+      newlyConfirmedSignals,
+      newlyUnlockedBadges,
+    });
   }
 
   await appendSnapshotsBatch(snapshotsToWrite);

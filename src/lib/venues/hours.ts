@@ -29,12 +29,15 @@ export function findOpenWindow(hours: VenueHours[], now: Date, timeZone: string)
   const dayOfWeek = zoned.dayOfWeek;
   const prevDayOfWeek = (dayOfWeek + 6) % 7;
 
-  const todayHours = hours.filter((h) => h.dayOfWeek === dayOfWeek);
-  const prevDayHours = hours.filter((h) => h.dayOfWeek === prevDayOfWeek);
+  // A row with isClosed=true (an explicit "we verified this venue is closed Mondays," not
+  // just the absence of a row) has null open/close times by construction — skip it rather
+  // than treat it as an all-day window.
+  const todayHours = hours.filter((h) => h.dayOfWeek === dayOfWeek && !h.isClosed && h.openTime && h.closeTime);
+  const prevDayHours = hours.filter((h) => h.dayOfWeek === prevDayOfWeek && !h.isClosed && h.openTime && h.closeTime);
 
   for (const h of todayHours) {
-    const open = toMinutes(h.openTime);
-    const close = toMinutes(h.closeTime);
+    const open = toMinutes(h.openTime!);
+    const close = toMinutes(h.closeTime!);
     const crossesMidnight = close <= open;
     const effectiveClose = crossesMidnight ? close + 24 * 60 : close;
 
@@ -48,8 +51,8 @@ export function findOpenWindow(hours: VenueHours[], now: Date, timeZone: string)
   }
 
   for (const h of prevDayHours) {
-    const open = toMinutes(h.openTime);
-    const close = toMinutes(h.closeTime);
+    const open = toMinutes(h.openTime!);
+    const close = toMinutes(h.closeTime!);
     const crossesMidnight = close <= open;
     if (!crossesMidnight) continue;
     const nowMinutesFromPrevDayOpen = nowMinutesToday + 24 * 60;

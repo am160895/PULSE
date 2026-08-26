@@ -39,16 +39,40 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   // Score the primary venue and every candidate alternative in one batch — same total
   // round-trip cost whether there are 0 or 10 nearby candidates.
-  const states = await computeVenueStatesBatch([venue, ...nearby.map((n) => n.v)], now);
-  const { pulse, openState, coverageState } = states.get(venue.id)!;
+  const states = await computeVenueStatesBatch([venue, ...nearby.map((n) => n.v)], now, session.profile.id);
+  const { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, newlyConfirmedSignals, newlyUnlockedBadges } =
+    states.get(venue.id)!;
 
-  const result: VenueWithPulse = { ...venue, pulse, openState, coverageState, isSaved: savedIds.has(venue.id), friendsPresent };
+  const result: VenueWithPulse = {
+    ...venue,
+    pulse,
+    openState,
+    coverageState,
+    openStatus,
+    currentPulseStatus,
+    hoursDiscrepancy,
+    isSaved: savedIds.has(venue.id),
+    friendsPresent,
+  };
 
   const alternatives: VenueWithPulse[] = nearby
-    .map(({ v, distance }) => ({ ...v, ...states.get(v.id)!, isSaved: savedIds.has(v.id), distanceMeters: distance }))
+    .map(({ v, distance }) => {
+      const alt = states.get(v.id)!;
+      return {
+        ...v,
+        pulse: alt.pulse,
+        openState: alt.openState,
+        coverageState: alt.coverageState,
+        openStatus: alt.openStatus,
+        currentPulseStatus: alt.currentPulseStatus,
+        hoursDiscrepancy: alt.hoursDiscrepancy,
+        isSaved: savedIds.has(v.id),
+        distanceMeters: distance,
+      };
+    })
     .filter((v) => v.pulse.pulseScore > pulse.pulseScore)
     .sort((a, b) => b.pulse.pulseScore - a.pulse.pulseScore)
     .slice(0, 3);
 
-  return NextResponse.json({ venue: result, alternatives });
+  return NextResponse.json({ venue: result, alternatives, newlyConfirmedSignals, newlyUnlockedBadges });
 }

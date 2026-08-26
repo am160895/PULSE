@@ -4,6 +4,7 @@ import type {
   Venue,
   VenueEvent,
   VenueHourlyBaseline,
+  VenueHours,
   VenueReport,
   VenueSignalSnapshot,
 } from "@/types";
@@ -34,6 +35,10 @@ export interface CalculatePulseScoreInput {
   friendsPresentCount: number;
   history: VenueSignalSnapshot[]; // pre-filtered to this venue, prior snapshots
   trustScores: Map<string, number>;
+  /** venue.hours with any special-hours override for today/yesterday already applied —
+   * see lib/venues/specialHours.ts's buildEffectiveHours. Callers that haven't computed
+   * this yet (no special hours in play) can just pass venue.hours itself. */
+  effectiveHours: VenueHours[];
 }
 
 function clamp(n: number, min: number, max: number): number {
@@ -52,7 +57,7 @@ function mostRecentScore(history: VenueSignalSnapshot[]): number | null {
 }
 
 export function calculatePulseScore(input: CalculatePulseScoreInput): PulseResult {
-  const { venue, now, reports, baselines, events, friendsPresentCount, history, trustScores } = input;
+  const { venue, now, reports, baselines, events, friendsPresentCount, history, trustScores, effectiveHours } = input;
 
   const liveReportSignal = calculateLiveReportSignal({
     reports,
@@ -64,7 +69,7 @@ export function calculatePulseScore(input: CalculatePulseScoreInput): PulseResul
   const trendSignal = calculateTrendSignal(history, now);
   const eventSignal = calculateEventSignal(events, now);
   const friendSignal = calculateFriendActivitySignal(friendsPresentCount);
-  const opennessSignal = calculateOpennessSignal(venue.hours, now, venue.timezone);
+  const opennessSignal = calculateOpennessSignal(effectiveHours, now, venue.timezone);
   const confidenceSignal = calculateConfidenceSignal({
     weightedReportCount: liveReportSignal.weightedCount,
     agreementScore: liveReportSignal.agreementScore,
@@ -127,9 +132,10 @@ export function calculatePulseScore(input: CalculatePulseScoreInput): PulseResul
     estimateWaitFromReports(liveReportSignal.weighted) ??
     estimateWaitFromHistorical(historicalSignal.historicalWaitScore);
 
-  const expectedPeak = opennessSignal.isOpenNow
-    ? estimateExpectedPeak(baselines, now, venue.timezone, confidenceSignal.confidenceLabel)
-    : null;
+  // Computed regardless of whether the venue is open right now — a closed venue still has
+  // a meaningful "typical peak" to show ("Closed · Typical Friday peak: 11 PM"), and the
+  // spec's closed-venue display explicitly wants this. Only the live score itself is gated.
+  const expectedPeak = estimateExpectedPeak(baselines, now, venue.timezone, confidenceSignal.confidenceLabel);
 
   const freshness = calculateFreshness(liveReportSignal.freshestAgeMinutes);
 

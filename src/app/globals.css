@@ -560,6 +560,168 @@ button {
   color: var(--hot);
 }
 
+/* ---------- Gamification: contribution success / XP / badges ---------- */
+/* Restrained by design — Strava/Apple Fitness/premium-fintech territory, not a mobile
+   game: thin bars, small monochrome-ish medallions, one brief float-up XP indicator, no
+   particle effects except the badge-celebration confetti (reserved for genuine unlocks). */
+
+.contribution-success {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-strong);
+  animation: success-enter 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes success-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.success-check {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--active-soft);
+  color: var(--active);
+  flex-shrink: 0;
+}
+
+.xp-pop {
+  display: inline-flex;
+  color: var(--active);
+  font-weight: 700;
+  font-size: 13px;
+  animation: xp-pop 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes xp-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(0) scale(1.08);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contribution-success {
+    animation: none;
+  }
+  .xp-pop {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Thin progress bar — level/neighborhood progress, deliberately restrained (not a
+   video-game XP bar): 6px tall, soft track, solid accent fill. */
+.progress-bar-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Badge medallions — dark geometric/circular artwork, one shared visual family across
+   every badge (never cartoon clipart). Sizes are set per usage site via inline style. */
+.badge-medallion {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.badge-medallion.unlocked {
+  background: linear-gradient(160deg, var(--surface-3), var(--surface-2));
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.badge-celebration-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 24px;
+}
+
+.badge-celebration-card {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-strong);
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  padding: 32px 24px 24px;
+  animation: success-enter 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-celebration-card {
+    animation: none;
+  }
+}
+
+/* A handful of small celebratory particles for a genuine badge unlock — the one place
+   the spec explicitly allows more than a subtle animation. Position/delay set inline
+   per-particle so they fan out instead of stacking. */
+.celebration-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0;
+  animation: particle-burst 900ms cubic-bezier(0.15, 0.6, 0.3, 1) forwards;
+}
+
+@keyframes particle-burst {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--particle-x, 0), var(--particle-y, -60px)) scale(0.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebration-particle {
+    display: none;
+  }
+}
+
 /* ---------- Scrollbar (desktop polish) ---------- */
 
 * {

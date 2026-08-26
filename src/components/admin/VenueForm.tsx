@@ -35,8 +35,8 @@ interface FormState {
 function initialState(venue?: Venue): FormState {
   const hours: DayHours[] = DAY_LABELS.map((_, dayOfWeek) => {
     const existing = venue?.hours.find((h) => h.dayOfWeek === dayOfWeek);
-    return existing
-      ? { open: existing.openTime, close: existing.closeTime, enabled: true }
+    return existing && !existing.isClosed
+      ? { open: existing.openTime ?? "18:00", close: existing.closeTime ?? "02:00", enabled: true }
       : { open: "18:00", close: "02:00", enabled: false };
   });
 

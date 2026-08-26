@@ -2,8 +2,19 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import type { CrowdLevel, EnergyLevel, WaitLevel } from "@/types";
+import type { BadgeCode, ContributorLevel, CrowdLevel, EnergyLevel, PulseResult, WaitLevel } from "@/types";
+import type { ImpactMessage } from "@/lib/pulse/impactMessage";
 import { requestJson } from "@/lib/http/requestJson";
+import { getUserLocationOnce } from "@/lib/geo/userLocation";
+
+export interface ReportSubmitResult {
+  reportId: string;
+  pulse: PulseResult;
+  flaggedForReview: boolean;
+  xp: { totalXpAwarded: number; totalXp: number; level: ContributorLevel; leveledUp: boolean };
+  badgesUnlocked: Array<{ code: BadgeCode; neighborhood: string; xpEventId: string | null }>;
+  impactMessage: ImpactMessage;
+}
 
 const CROWD_OPTIONS: { value: CrowdLevel; label: string }[] = [
   { value: "QUIET", label: "Quiet" },
@@ -28,7 +39,7 @@ const ENERGY_OPTIONS: { value: EnergyLevel; label: string }[] = [
 interface Props {
   venueId: string;
   onClose: () => void;
-  onSubmitted: () => void;
+  onSubmitted: (result: ReportSubmitResult, reportedShareArrival: boolean) => void;
 }
 
 export function ReportSheet({ venueId, onClose, onSubmitted }: Props) {
@@ -47,17 +58,15 @@ export function ReportSheet({ venueId, onClose, onSubmitted }: Props) {
     setSubmitting(true);
     setError(null);
 
-    let userLocation: { lat: number; lng: number } | undefined;
-    try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 })
-      );
-      userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    } catch {
-      // Location denied or unavailable — the report still submits, just unverified.
-    }
+    // Shared, session-cached lookup (see lib/geo/userLocation.ts) — this used to call
+    // getCurrentPosition fresh on every single report submission, independently of the
+    // map/Explore pages' own lookups, which meant the browser could be asked for location
+    // repeatedly as someone moved between screens and reported. Undefined here (denied or
+    // unavailable) still lets the report submit, just unverified.
+    const loc = await getUserLocationOnce();
+    const userLocation = loc ?? undefined;
 
-    const result = await requestJson(`/api/venues/${venueId}/reports`, {
+    const result = await requestJson<ReportSubmitResult>(`/api/venues/${venueId}/reports`, {
       method: "POST",
       body: { crowdLevel, waitLevel, energyLevel, crowdNote: note || undefined, userLocation },
     });
@@ -70,7 +79,9 @@ export function ReportSheet({ venueId, onClose, onSubmitted }: Props) {
 
     if (shareArrival) {
       // Best-effort: presence sharing might be off in settings, in which case this
-      // 403s quietly — the report itself already succeeded either way.
+      // 403s quietly — the report itself already succeeded either way. Its own XP (if
+      // any) is intentionally not surfaced here — the report's own success toast is the
+      // one moment of feedback for this submission, not two overlapping toasts.
       await requestJson("/api/presence", {
         method: "POST",
         body: { venueId, status: "AT_VENUE", visibility: "FRIENDS" },
@@ -78,7 +89,7 @@ export function ReportSheet({ venueId, onClose, onSubmitted }: Props) {
     }
 
     setSubmitting(false);
-    onSubmitted();
+    onSubmitted(result.data, shareArrival);
   }
 
   return (

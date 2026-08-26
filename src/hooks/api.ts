@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { VenueWithPulse } from "@/types";
+import type { BadgeCode, ConfirmedSignal, VenueWithPulse } from "@/types";
 import { MAP_REFRESH_MS, VENUE_DETAIL_REFRESH_MS } from "@/config/constants";
 import type { ExploreSection } from "@/lib/pulse/explore";
 
@@ -67,7 +67,13 @@ export function useVenueSearch(query: string) {
 export function useVenue(id: string) {
   return useQuery({
     queryKey: ["venue", id],
-    queryFn: () => fetchJson<{ venue: VenueWithPulse; alternatives: VenueWithPulse[] }>(`/api/venues/${id}`),
+    queryFn: () =>
+      fetchJson<{
+        venue: VenueWithPulse;
+        alternatives: VenueWithPulse[];
+        newlyConfirmedSignals: ConfirmedSignal[];
+        newlyUnlockedBadges: Array<{ code: BadgeCode; neighborhood: string; xpEventId: string | null }>;
+      }>(`/api/venues/${id}`),
     refetchInterval: VENUE_DETAIL_REFRESH_MS,
   });
 }

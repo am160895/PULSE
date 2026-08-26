@@ -6,6 +6,7 @@ import type {
   VenueHours,
   VenueReport,
   VenueSignalSnapshot,
+  VenueSpecialHours,
   VenueType,
 } from "@/types";
 import type { BoundingBox } from "@/lib/geo";
@@ -27,9 +28,26 @@ function rowToHours(row: Row): VenueHours {
     id: row.id,
     venueId: row.venue_id,
     dayOfWeek: row.day_of_week,
+    isClosed: row.is_closed,
     // Postgres `time` serializes as "HH:MM:SS" — the app's own format is "HH:mm" throughout.
-    openTime: String(row.open_time).slice(0, 5),
-    closeTime: String(row.close_time).slice(0, 5),
+    openTime: row.open_time == null ? null : String(row.open_time).slice(0, 5),
+    closeTime: row.close_time == null ? null : String(row.close_time).slice(0, 5),
+    source: row.source,
+    lastVerifiedAt: row.last_verified_at,
+  };
+}
+
+function rowToSpecialHours(row: Row): VenueSpecialHours {
+  return {
+    id: row.id,
+    venueId: row.venue_id,
+    specialDate: row.special_date,
+    isClosed: row.is_closed,
+    openTime: row.open_time == null ? null : String(row.open_time).slice(0, 5),
+    closeTime: row.close_time == null ? null : String(row.close_time).slice(0, 5),
+    reason: row.reason,
+    source: row.source,
+    lastVerifiedAt: row.last_verified_at,
   };
 }
 
@@ -168,24 +186,48 @@ export async function listAllVenuesForAdmin(): Promise<Venue[]> {
   return rows.map(rowToVenue);
 }
 
+export interface NewVenueHoursInput {
+  dayOfWeek: number;
+  isClosed?: boolean;
+  openTime?: string | null;
+  closeTime?: string | null;
+  source?: import("@/types").HoursSource;
+  lastVerifiedAt?: string | null;
+}
+
 export type NewVenueInput = Omit<
   Venue,
   "id" | "slug" | "hours" | "createdAt" | "updatedAt" | "externalPlaceId" | "businessStatus" | "externalRating" | "externalRatingCount" | "claimStatus"
 > & {
-  hours: Array<{ dayOfWeek: number; openTime: string; closeTime: string }>;
+  hours: NewVenueHoursInput[];
 };
 
 function slugifyVenueName(name: string, disambiguator: string): string {
   return `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${disambiguator}`;
 }
 
-async function replaceHours(venueId: string, hours: Array<{ dayOfWeek: number; openTime: string; closeTime: string }>) {
+/** Used by createVenueAdmin/updateVenueAdmin (true admin-facing functions — the only
+ * real-world callers that ever pass non-empty hours today) so hand-entered hours default
+ * to source: "ADMIN" and a fresh verification timestamp without every call site having to
+ * say so explicitly. */
+async function replaceHours(venueId: string, hours: NewVenueHoursInput[]) {
   unwrap(await supabaseAdmin().from("venue_hours").delete().eq("venue_id", venueId));
   if (hours.length === 0) return;
+  const now = new Date().toISOString();
   unwrap(
     await supabaseAdmin()
       .from("venue_hours")
-      .insert(hours.map((h) => ({ venue_id: venueId, day_of_week: h.dayOfWeek, open_time: h.openTime, close_time: h.closeTime })))
+      .insert(
+        hours.map((h) => ({
+          venue_id: venueId,
+          day_of_week: h.dayOfWeek,
+          is_closed: h.isClosed ?? false,
+          open_time: h.isClosed ? null : (h.openTime ?? null),
+          close_time: h.isClosed ? null : (h.closeTime ?? null),
+          source: h.source ?? "ADMIN",
+          last_verified_at: h.lastVerifiedAt ?? now,
+        }))
+      )
   );
 }
 
@@ -223,7 +265,7 @@ export async function createVenueAdmin(fields: NewVenueInput): Promise<Venue> {
 }
 
 export type VenueAdminPatch = Partial<Omit<Venue, "id" | "slug" | "hours" | "createdAt" | "updatedAt">> & {
-  hours?: Array<{ dayOfWeek: number; openTime: string; closeTime: string }>;
+  hours?: NewVenueHoursInput[];
 };
 
 export async function updateVenueAdmin(id: string, patch: VenueAdminPatch): Promise<Venue | null> {
@@ -299,7 +341,7 @@ export async function upsertDirectoryVenueFromExternal(fields: {
   postalCode: string;
   timezone: string;
   venueType: Venue["venueType"];
-  hours: Array<{ dayOfWeek: number; openTime: string; closeTime: string }>;
+  hours: NewVenueHoursInput[];
   businessStatus: Venue["businessStatus"];
   priceLevel: Venue["priceLevel"] | null;
   externalRating: number | null;
@@ -494,7 +536,13 @@ export async function getLastReportByUserForVenue(userId: string, venueId: strin
   return row ? rowToReport(row) : undefined;
 }
 
-export async function createReport(fields: Omit<VenueReport, "id" | "createdAt">): Promise<VenueReport> {
+/** `createdAt` is optional and meant only for backdating simulated/demo reports (real
+ * submissions always omit it, letting Postgres's own now() default apply) — previously
+ * simulateReportsForVenue computed a backdated age that this function silently discarded,
+ * so every simulated report landed at the real submission instant instead of its intended
+ * age. Explicitly setting it here lets the venue_reports_set_cooldown_window trigger
+ * recompute cooldown_window from the real value, exactly as it does for a normal insert. */
+export async function createReport(fields: Omit<VenueReport, "id" | "createdAt"> & { createdAt?: string }): Promise<VenueReport> {
   const row = unwrap(
     await supabaseAdmin()
       .from("venue_reports")
@@ -508,6 +556,7 @@ export async function createReport(fields: Omit<VenueReport, "id" | "createdAt">
         report_source: fields.reportSource,
         is_verified_nearby: fields.isVerifiedNearby,
         trust_weight_at_submission: fields.trustWeightAtSubmission,
+        ...(fields.createdAt ? { created_at: fields.createdAt } : {}),
       })
       .select()
       .single()
@@ -517,6 +566,18 @@ export async function createReport(fields: Omit<VenueReport, "id" | "createdAt">
 
 export async function flagReport(reportId: string, flaggedBy: string, reason: string): Promise<void> {
   unwrap(await supabaseAdmin().from("report_flags").insert({ report_id: reportId, flagged_by: flaggedBy, reason }));
+}
+
+export async function getReportById(id: string): Promise<VenueReport | undefined> {
+  const row = unwrap(await supabaseAdmin().from("venue_reports").select().eq("id", id).maybeSingle());
+  return row ? rowToReport(row) : undefined;
+}
+
+/** Dev/demo-only: backdates an existing report's created_at so the delayed-confirmation
+ * demo trigger (/api/dev/simulate-confirmation) doesn't require waiting out the real
+ * 20-45 minute window. Never called from any real user-facing flow. */
+export async function backdateReportForDemo(id: string, createdAtIso: string): Promise<void> {
+  unwrap(await supabaseAdmin().from("venue_reports").update({ created_at: createdAtIso }).eq("id", id));
 }
 
 /** Takes an hours-ago window (not a timestamp) so the "now" it's relative to is computed
@@ -530,6 +591,19 @@ export async function countReportsInLastHours(hours: number): Promise<number> {
     .gte("created_at", sinceIso);
   if (error) throw new Error(`Supabase error: ${error.message}`);
   return count ?? 0;
+}
+
+/** Used to decide the FIRST_REPORT_TONIGHT XP bonus — checked BEFORE the new report is
+ * created, so the new report itself never counts as its own prior "someone already
+ * reported tonight" evidence. */
+export async function hasReportSinceForVenue(venueId: string, sinceIso: string): Promise<boolean> {
+  const { count, error } = await supabaseAdmin()
+    .from("venue_reports")
+    .select("*", { count: "exact", head: true })
+    .eq("venue_id", venueId)
+    .gte("created_at", sinceIso);
+  if (error) throw new Error(`Supabase error: ${error.message}`);
+  return (count ?? 0) > 0;
 }
 
 export async function recentReportValuesByUser(userId: string, limit = 6): Promise<string[]> {
@@ -572,6 +646,51 @@ export async function listEventsForVenues(venueIds: string[]): Promise<Map<strin
     supabaseAdmin().from("venue_events").select("*", { count: "exact" }).in("venue_id", venueIds).range(from, to)
   );
   return groupBy(rows.map(rowToEvent), (e) => e.venueId);
+}
+
+// ---------------- special hours ----------------
+// A separate bounded query (a narrow date window around "now"), not embedded into
+// VENUE_SELECT/Venue — special hours are rare (most venues have none) and open-ended in
+// time, so folding them into every venue fetch would cost every caller of listVenues()/
+// getVenueById() a join they almost never need. Only the hours-status computation path
+// (composeVenue.ts) fetches these.
+
+/** today-1 to today+13 in UTC-date terms is a generous enough window that a venue in any
+ * real timezone still has "today" and "yesterday" (needed by buildEffectiveHours) plus
+ * two weeks of upcoming special dates (needed by getVenueOpenStatus's forward scan)
+ * covered without a per-venue-timezone-aware query. */
+function specialHoursDateWindow(now: Date): { from: string; to: string } {
+  const from = new Date(now.getTime() - 24 * 3_600_000).toISOString().slice(0, 10);
+  const to = new Date(now.getTime() + 13 * 24 * 3_600_000).toISOString().slice(0, 10);
+  return { from, to };
+}
+
+export async function listSpecialHoursForVenue(venueId: string, now: Date = new Date()): Promise<VenueSpecialHours[]> {
+  const { from, to } = specialHoursDateWindow(now);
+  const rows = unwrap(
+    await supabaseAdmin()
+      .from("venue_special_hours")
+      .select()
+      .eq("venue_id", venueId)
+      .gte("special_date", from)
+      .lte("special_date", to)
+  );
+  return rows.map(rowToSpecialHours);
+}
+
+export async function listSpecialHoursForVenues(venueIds: string[], now: Date = new Date()): Promise<Map<string, VenueSpecialHours[]>> {
+  if (venueIds.length === 0) return new Map();
+  const { from, to } = specialHoursDateWindow(now);
+  const rows = await fetchAllRows((rangeFrom, rangeTo) =>
+    supabaseAdmin()
+      .from("venue_special_hours")
+      .select("*", { count: "exact" })
+      .in("venue_id", venueIds)
+      .gte("special_date", from)
+      .lte("special_date", to)
+      .range(rangeFrom, rangeTo)
+  );
+  return groupBy(rows.map(rowToSpecialHours), (s) => s.venueId);
 }
 
 // ---------------- signal snapshots ----------------

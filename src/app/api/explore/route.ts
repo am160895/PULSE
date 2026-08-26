@@ -23,15 +23,23 @@ export async function GET(request: NextRequest) {
     listSavedVenueIds(session.profile.id),
     listVisiblePresenceForViewer(session.profile.id, now),
   ]);
-  const states = await computeVenueStatesBatch(allVenues, now);
+  const states = await computeVenueStatesBatch(allVenues, now, session.profile.id);
 
-  const venues: VenueWithPulse[] = allVenues.map((venue) => ({
-    ...venue,
-    ...states.get(venue.id)!,
-    isSaved: savedIds.has(venue.id),
-    friendsPresent: visiblePresence.filter((p) => p.venueId === venue.id),
-    distanceMeters: userLocation ? haversineDistanceMeters(userLocation, { lat: venue.latitude, lng: venue.longitude }) : undefined,
-  }));
+  const venues: VenueWithPulse[] = allVenues.map((venue) => {
+    const state = states.get(venue.id)!;
+    return {
+      ...venue,
+      pulse: state.pulse,
+      openState: state.openState,
+      coverageState: state.coverageState,
+      openStatus: state.openStatus,
+      currentPulseStatus: state.currentPulseStatus,
+      hoursDiscrepancy: state.hoursDiscrepancy,
+      isSaved: savedIds.has(venue.id),
+      friendsPresent: visiblePresence.filter((p) => p.venueId === venue.id),
+      distanceMeters: userLocation ? haversineDistanceMeters(userLocation, { lat: venue.latitude, lng: venue.longitude }) : undefined,
+    };
+  });
 
   return NextResponse.json({ sections: buildExploreSections(venues) });
 }

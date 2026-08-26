@@ -15,6 +15,8 @@ interface Props {
 
 export function VenueBottomSheet({ venue, onClose, onToggleSaved }: Props) {
   const isDirectory = venue.coverageState === "DIRECTORY";
+  const isClosed = venue.currentPulseStatus === "CLOSED";
+  const showScore = !isDirectory && !isClosed;
 
   return (
     <div className="fixed left-0 right-0 bottom-16 z-40 px-2 pb-2">
@@ -32,7 +34,7 @@ export function VenueBottomSheet({ venue, onClose, onToggleSaved }: Props) {
                 {venue.distanceMeters !== undefined ? ` · ${formatDistance(venue.distanceMeters)}` : ""}
               </p>
             </div>
-            {!isDirectory && (
+            {showScore && (
               <div className="text-right shrink-0">
                 <div className="pulse-score-number" style={{ fontSize: 30 }}>
                   {venue.pulse.pulseScore}
@@ -45,6 +47,8 @@ export function VenueBottomSheet({ venue, onClose, onToggleSaved }: Props) {
             <OpenStateBadge state={venue.openState} />
             {isDirectory ? (
               <span className="badge badge-low">No live PULSE yet</span>
+            ) : isClosed ? (
+              <span className="badge badge-low">{venue.openStatus.displayText}</span>
             ) : (
               <>
                 <PulseLabelBadge label={venue.pulse.pulseLabel} />
@@ -57,7 +61,7 @@ export function VenueBottomSheet({ venue, onClose, onToggleSaved }: Props) {
             <p className="text-[13px] text-[var(--text-secondary)] mt-3">
               Nobody&apos;s reported here yet — be the first to say how it is tonight.
             </p>
-          ) : (
+          ) : isClosed ? null : (
             <div className="flex items-center justify-between mt-3 text-sm">
               <TrendIndicator trend={venue.pulse.trend} delta={venue.pulse.trendDeltaLast30Min} />
               <WaitBadge estimate={venue.pulse.waitEstimate} />

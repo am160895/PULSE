@@ -8,6 +8,7 @@ import type { VenueWithPulse } from "@/types";
 import { MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, MAP_STYLE_URL } from "@/config/constants";
 import { markerClassForLabel } from "@/components/venues/Badges";
 import type { BoundsParams } from "@/hooks/api";
+import { getUserLocationOnce } from "@/lib/geo/userLocation";
 
 interface MapViewProps {
   venues: VenueWithPulse[];
@@ -77,12 +78,10 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
     // tabs throttle rAF entirely). `load`/`moveend` still handle every update after this.
     emitBounds();
 
-    if (onUserLocation && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => onUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {},
-        { timeout: 4000 }
-      );
+    if (onUserLocation) {
+      getUserLocationOnce().then((loc) => {
+        if (loc) onUserLocation(loc);
+      });
     }
 
     function renderMarkers() {
@@ -128,7 +127,11 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
           const venue = venuesRef.current.find((v) => v.id === props.venueId);
           if (!venue) continue;
           const isDirectory = venue.coverageState === "DIRECTORY";
-          const cls = isDirectory ? "directory" : markerClassForLabel(venue.pulse.pulseLabel);
+          // A closed venue must never look like it's showing a normal live score (spec
+          // §22/§27) — reuses the same plain-dot dim treatment as DIRECTORY rather than
+          // inventing a second de-emphasized visual language.
+          const isDeemphasized = isDirectory || venue.currentPulseStatus === "CLOSED";
+          const cls = isDeemphasized ? "directory" : markerClassForLabel(venue.pulse.pulseLabel);
           const wrapper = document.createElement("div");
           wrapper.style.position = "relative";
           if (cls === "hot" || cls === "rising") {
@@ -137,9 +140,9 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
             wrapper.appendChild(ring);
           }
           el.className = `venue-marker ${cls}${venue.id === selectedVenueIdRef.current ? " selected" : ""}`;
-          // A DIRECTORY venue has no PULSE data at all — showing any number here, even "–",
-          // would look like a score. It gets a plain dot (see .venue-marker.directory) instead.
-          el.textContent = isDirectory ? "" : venue.pulse.pulseScore > 0 ? String(venue.pulse.pulseScore) : "–";
+          // A de-emphasized venue (no PULSE data at all, or currently closed) never shows
+          // a number here, even "–" — that would still look like a score.
+          el.textContent = isDeemphasized ? "" : venue.pulse.pulseScore > 0 ? String(venue.pulse.pulseScore) : "–";
           wrapper.appendChild(el);
           wrapper.addEventListener("click", () => onSelectRef.current(venue.id));
 

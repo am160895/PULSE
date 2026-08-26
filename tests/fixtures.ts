@@ -1,16 +1,37 @@
-import type { Venue, VenueHours, VenueReport } from "@/types";
+import type { UserNeighborhoodProgress, Venue, VenueHours, VenueReport, VenueSpecialHours, XpEvent } from "@/types";
+
+export function makeHours(overrides: Partial<VenueHours> = {}): VenueHours {
+  return {
+    id: "h1",
+    venueId: "venue-1",
+    dayOfWeek: 0,
+    isClosed: false,
+    openTime: "00:00",
+    closeTime: "23:59",
+    source: "SEED",
+    lastVerifiedAt: null,
+    ...overrides,
+  };
+}
+
+export function makeSpecialHours(overrides: Partial<VenueSpecialHours> = {}): VenueSpecialHours {
+  return {
+    id: "sh1",
+    venueId: "venue-1",
+    specialDate: "2026-01-02",
+    isClosed: false,
+    openTime: "20:00",
+    closeTime: "04:00",
+    reason: "New Year's Eve",
+    source: "ADMIN",
+    lastVerifiedAt: null,
+    ...overrides,
+  };
+}
 
 export function makeVenue(overrides: Partial<Venue> = {}): Venue {
   const id = overrides.id ?? "venue-1";
-  const hours: VenueHours[] = overrides.hours ?? [
-    { id: "h1", venueId: id, dayOfWeek: 0, openTime: "00:00", closeTime: "23:59" },
-    { id: "h2", venueId: id, dayOfWeek: 1, openTime: "00:00", closeTime: "23:59" },
-    { id: "h3", venueId: id, dayOfWeek: 2, openTime: "00:00", closeTime: "23:59" },
-    { id: "h4", venueId: id, dayOfWeek: 3, openTime: "00:00", closeTime: "23:59" },
-    { id: "h5", venueId: id, dayOfWeek: 4, openTime: "00:00", closeTime: "23:59" },
-    { id: "h6", venueId: id, dayOfWeek: 5, openTime: "00:00", closeTime: "23:59" },
-    { id: "h7", venueId: id, dayOfWeek: 6, openTime: "00:00", closeTime: "23:59" },
-  ];
+  const hours: VenueHours[] = overrides.hours ?? Array.from({ length: 7 }, (_, dayOfWeek) => makeHours({ id: `h${dayOfWeek + 1}`, venueId: id, dayOfWeek }));
 
   return {
     id,
@@ -58,6 +79,31 @@ export function makeReport(overrides: Partial<VenueReport> = {}): VenueReport {
     reportSource: "APP",
     isVerifiedNearby: true,
     trustWeightAtSubmission: 0.5,
+    ...overrides,
+  };
+}
+
+export function makeXpEvent(overrides: Partial<XpEvent> = {}): XpEvent {
+  return {
+    id: overrides.id ?? "xp-1",
+    userId: "user-1",
+    rewardType: "CROWD_REPORT",
+    xpAmount: 15,
+    sourceId: "report-1",
+    venueId: "venue-1",
+    neighborhood: "West Village",
+    metadata: {},
+    createdAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+export function makeNeighborhoodProgress(overrides: Partial<UserNeighborhoodProgress> = {}): UserNeighborhoodProgress {
+  return {
+    userId: "user-1",
+    neighborhood: "West Village",
+    xp: 0,
+    updatedAt: new Date().toISOString(),
     ...overrides,
   };
 }

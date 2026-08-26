@@ -32,20 +32,26 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
   const [states, savedIds, visiblePresence] = await Promise.all([
-    computeVenueStatesBatch(venues, now),
+    computeVenueStatesBatch(venues, now, session.profile.id),
     listSavedVenueIds(session.profile.id),
     listVisiblePresenceForViewer(session.profile.id, now),
   ]);
   const userLocation = userLat && userLng ? { lat: Number(userLat), lng: Number(userLng) } : null;
 
+  const newlyConfirmedSignals = [...states.values()].flatMap((s) => s.newlyConfirmedSignals);
+  const newlyUnlockedBadges = [...states.values()].flatMap((s) => s.newlyUnlockedBadges);
+
   let results: VenueWithPulse[] = venues.map((venue) => {
-    const { pulse, openState, coverageState } = states.get(venue.id)!;
+    const { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy } = states.get(venue.id)!;
     const friendsPresent = visiblePresence.filter((p) => p.venueId === venue.id);
     return {
       ...venue,
       pulse,
       openState,
       coverageState,
+      openStatus,
+      currentPulseStatus,
+      hoursDiscrepancy,
       isSaved: savedIds.has(venue.id),
       friendsPresent,
       distanceMeters: userLocation ? haversineDistanceMeters(userLocation, { lat: venue.latitude, lng: venue.longitude }) : undefined,
@@ -58,5 +64,5 @@ export async function GET(request: NextRequest) {
     results = results.filter((v) => v.coverageState !== "DIRECTORY");
   }
 
-  return NextResponse.json({ venues: results });
+  return NextResponse.json({ venues: results, newlyConfirmedSignals, newlyUnlockedBadges });
 }

@@ -1,16 +1,52 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Bookmark, Info, MapPin, Music, Share2, Users } from "lucide-react";
 import { useInvalidateVenue, useVenue, useVenueHistory } from "@/hooks/api";
-import { ConfidenceBadge, FreshnessBadge, OpenStateBadge, PulseLabelBadge, PulseScoreDisplay, TrendIndicator, WaitBadge } from "@/components/venues/Badges";
+import {
+  ClosedVenueStatus,
+  ConfidenceBadge,
+  FreshnessBadge,
+  OpenStateBadge,
+  PulseLabelBadge,
+  PulseScoreDisplay,
+  TrendIndicator,
+  WaitBadge,
+} from "@/components/venues/Badges";
 import { ActivityGraph } from "@/components/venues/ActivityGraph";
-import { ReportSheet } from "@/components/venues/ReportSheet";
+import { ReportSheet, type ReportSubmitResult } from "@/components/venues/ReportSheet";
+import { WeeklyHoursSheet } from "@/components/venues/WeeklyHoursSheet";
+import { ContributionSuccess, type ContributionSuccessProps } from "@/components/gamification/ContributionSuccess";
+import { BadgeCelebration } from "@/components/gamification/BadgeCelebration";
+import { BADGE_CATALOG } from "@/lib/gamification/badgeCatalog";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
 import { VENUE_TYPE_LABELS } from "@/config/constants";
 import { requestJson } from "@/lib/http/requestJson";
 import { format, parseISO } from "date-fns";
+import type { BadgeCode, ContributorLevel } from "@/types";
+
+interface XpResult {
+  awarded?: boolean;
+  xpAmount: number;
+  totalXp: number;
+  level: ContributorLevel;
+  leveledUp: boolean;
+}
+
+interface BadgeUnlock {
+  code: BadgeCode;
+  neighborhood: string;
+  xpEventId: string | null;
+}
+
+function progressFromXp(xp: XpResult) {
+  return {
+    label: xp.level.label,
+    current: xp.totalXp - xp.level.minXp,
+    target: xp.level.nextLevelXp ? xp.level.nextLevelXp - xp.level.minXp : null,
+  };
+}
 
 export default function VenuePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -18,7 +54,50 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
   const { data: history } = useVenueHistory(id);
   const invalidate = useInvalidateVenue();
   const [showReport, setShowReport] = useState(false);
+  const [showHours, setShowHours] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [imHereSubmitting, setImHereSubmitting] = useState(false);
+  const [imHereError, setImHereError] = useState<string | null>(null);
+  const [toast, setToast] = useState<(ContributionSuccessProps & { key: string }) | null>(null);
+  const [celebratingBadge, setCelebratingBadge] = useState<{ name: string; description: string; motif: string } | null>(null);
+  const badgeQueueRef = useRef<BadgeCode[]>([]);
+  const [lastOwnReportId, setLastOwnReportId] = useState<string | null>(null);
+  const shownConfirmationsRef = useRef<Set<string>>(new Set());
+
+  function celebrateNextBadge() {
+    const next = badgeQueueRef.current.shift();
+    if (next) {
+      const def = BADGE_CATALOG[next];
+      setCelebratingBadge({ name: def.name, description: def.description, motif: def.motif });
+    }
+  }
+
+  function queueBadgeCelebrations(unlocks: BadgeUnlock[]) {
+    if (unlocks.length === 0) return;
+    badgeQueueRef.current.push(...unlocks.map((u) => u.code));
+    if (!celebratingBadge) celebrateNextBadge();
+  }
+
+  // Delayed accuracy confirmations (spec §5) surface here — useVenue's own 20s poll is
+  // the "later" moment that resolves them, no separate polling needed. A confirmation can
+  // also unlock TREND_SPOTTER/EARLY_SIGNAL, which structurally can only ever unlock this
+  // way (see composeVenue.ts) — queue those the same as any other badge unlock.
+  useEffect(() => {
+    if (!data?.newlyConfirmedSignals?.length) return;
+    for (const signal of data.newlyConfirmedSignals) {
+      if (shownConfirmationsRef.current.has(signal.reportId)) continue;
+      shownConfirmationsRef.current.add(signal.reportId);
+      setToast({
+        key: `confirmed-${signal.reportId}`,
+        title: "Accurate signal",
+        message: "Your earlier report was confirmed by the crowd.",
+        xpEarned: signal.xpAwarded,
+        onDismiss: () => setToast(null),
+      });
+    }
+    if (data.newlyUnlockedBadges?.length) queueBadgeCelebrations(data.newlyUnlockedBadges);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.newlyConfirmedSignals]);
 
   if (isError) {
     return (
@@ -49,6 +128,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
   const { venue, alternatives } = data;
   const { pulse } = venue;
   const isDirectory = venue.coverageState === "DIRECTORY";
+  const isClosed = venue.currentPulseStatus === "CLOSED";
   // "Better move" only earns its place when THIS venue actually has a problem (a real
   // queue, or momentum heading the wrong way) — not just because some other venue exists.
   // A thriving, rising venue doesn't need to suggest people leave (§14).
@@ -56,7 +136,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     (pulse.waitEstimate && pulse.waitEstimate.minMinutes >= 15) ||
     pulse.trend === "FALLING" ||
     pulse.trend === "FALLING_FAST";
-  const showBetterMove = !isDirectory && hasProblem && alternatives.length > 0;
+  const showBetterMove = !isDirectory && !isClosed && hasProblem && alternatives.length > 0;
 
   async function handleShare() {
     const url = window.location.href;
@@ -79,6 +159,55 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     if (result.ok) invalidate(venue.id);
   }
 
+  async function handleImHere() {
+    setImHereSubmitting(true);
+    setImHereError(null);
+    const result = await requestJson<{ xp: XpResult | null; badgesUnlocked: BadgeUnlock[] }>("/api/presence", {
+      method: "POST",
+      body: { venueId: venue.id, status: "AT_VENUE", visibility: "FRIENDS" },
+    });
+    setImHereSubmitting(false);
+
+    if (!result.ok) {
+      setImHereError(result.error);
+      return;
+    }
+
+    const xp = result.data.xp;
+    setToast({
+      key: `im-here-${Date.now()}`,
+      title: "You're on the Pulse",
+      message: "Presence shared with friends · expires automatically",
+      xpEarned: xp?.awarded ? xp.xpAmount : undefined,
+      progressUpdate: xp ? progressFromXp(xp) : null,
+      onDismiss: () => setToast(null),
+    });
+    invalidate(venue.id);
+    if (result.data.badgesUnlocked.length > 0) queueBadgeCelebrations(result.data.badgesUnlocked);
+  }
+
+  function handleReportSubmitted(result: ReportSubmitResult) {
+    setShowReport(false);
+    invalidate(venue.id);
+    setLastOwnReportId(result.reportId);
+
+    setToast({
+      key: `report-${result.reportId}`,
+      title: result.impactMessage.title,
+      message: result.impactMessage.detail,
+      xpEarned: result.xp.totalXpAwarded > 0 ? result.xp.totalXpAwarded : undefined,
+      progressUpdate: progressFromXp({ ...result.xp, xpAmount: result.xp.totalXpAwarded }),
+      onDismiss: () => setToast(null),
+    });
+    if (result.badgesUnlocked.length > 0) queueBadgeCelebrations(result.badgesUnlocked);
+  }
+
+  async function handleSimulateConfirmation() {
+    if (!lastOwnReportId) return;
+    await requestJson("/api/dev/simulate-confirmation", { method: "POST", body: { reportId: lastOwnReportId } });
+    setTimeout(() => refetch(), 300);
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-5 py-6 pb-10">
       <BackLink />
@@ -98,6 +227,12 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
         </div>
       </div>
 
+      <button onClick={() => setShowHours(true)} className="text-left mb-2">
+        <span className="text-[13px] font-medium" style={{ color: isClosed ? "var(--text-secondary)" : "var(--active)" }}>
+          {venue.openStatus.displayText}
+        </span>
+      </button>
+
       {isDirectory ? (
         <div className="mb-4 py-3 border-y border-[var(--border)]">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -108,6 +243,8 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
             This is a real, known venue — nobody&apos;s reported here yet. Be the first to say how it is tonight.
           </p>
         </div>
+      ) : isClosed ? (
+        <ClosedVenueStatus openStatus={venue.openStatus} expectedPeak={pulse.expectedPeak} timeZone={venue.timezone} />
       ) : (
         <>
           <div className="flex items-center gap-4 mt-4 mb-2">
@@ -155,6 +292,12 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
         </>
       )}
 
+      {venue.hoursDiscrepancy && (
+        <p className="mb-4 text-[12.5px]" style={{ color: "var(--rising)" }}>
+          Possible hours discrepancy — recent verified activity at a venue marked closed.
+        </p>
+      )}
+
       {venue.friendsPresent && venue.friendsPresent.length > 0 && (
         <section className="mb-5">
           <SectionTitle icon={<Users size={14} />} title="Friends" />
@@ -169,17 +312,34 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
         </section>
       )}
 
-      <div className="grid grid-cols-3 gap-2 mb-6">
-        <button className="btn btn-primary col-span-1" onClick={() => setShowReport(true)}>
-          I&apos;m here
+      <div className="grid grid-cols-3 gap-2 mb-2">
+        <button className="btn btn-primary col-span-1" onClick={handleImHere} disabled={imHereSubmitting}>
+          {imHereSubmitting ? "…" : "I'm here"}
         </button>
-        <button className="btn btn-secondary" onClick={handleShare}>
-          <Share2 size={15} /> {shareMessage ?? "Share"}
+        <button className="btn btn-secondary" onClick={() => setShowReport(true)}>
+          Report
         </button>
         <button className="btn btn-secondary" onClick={handleToggleSaved}>
           <Bookmark size={15} fill={venue.isSaved ? "currentColor" : "none"} /> {venue.isSaved ? "Saved" : "Save"}
         </button>
       </div>
+      <div className="grid grid-cols-3 gap-2 mb-6">
+        <div />
+        <button className="btn btn-secondary col-span-2" onClick={handleShare}>
+          <Share2 size={15} /> {shareMessage ?? "Share"}
+        </button>
+      </div>
+      {imHereError && (
+        <p className="text-sm mb-4 -mt-4" style={{ color: "var(--danger)" }}>
+          {imHereError}
+        </p>
+      )}
+
+      {process.env.NODE_ENV !== "production" && lastOwnReportId && (
+        <button className="btn btn-ghost btn-sm mb-6" onClick={handleSimulateConfirmation}>
+          Dev: simulate crowd confirmation for last report
+        </button>
+      )}
 
       {showBetterMove && (
         <section className="mb-6">
@@ -213,12 +373,19 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
       </section>
 
       {showReport && (
-        <ReportSheet
-          venueId={venue.id}
-          onClose={() => setShowReport(false)}
-          onSubmitted={() => {
-            setShowReport(false);
-            invalidate(venue.id);
+        <ReportSheet venueId={venue.id} onClose={() => setShowReport(false)} onSubmitted={handleReportSubmitted} />
+      )}
+
+      {showHours && <WeeklyHoursSheet hours={venue.hours} timeZone={venue.timezone} onClose={() => setShowHours(false)} />}
+
+      {toast && <ContributionSuccess {...toast} />}
+
+      {celebratingBadge && (
+        <BadgeCelebration
+          badge={celebratingBadge}
+          onClose={() => {
+            setCelebratingBadge(null);
+            celebrateNextBadge();
           }}
         />
       )}

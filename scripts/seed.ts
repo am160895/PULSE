@@ -281,8 +281,11 @@ function buildHours(venueId: string, venueType: VenueType): VenueHours[] {
     id: uid(),
     venueId,
     dayOfWeek,
+    isClosed: false,
     openTime,
     closeTime,
+    source: "SEED" as const,
+    lastVerifiedAt: null,
   }));
 }
 
@@ -368,7 +371,16 @@ function generateBackgroundVenues(): Venue[] {
 // generous one, e.g. 08:00-04:00) still has a dead gap that real time eventually
 // lands in — this hit exactly that bug once already during development.
 function buildShowcaseHours(venueId: string): VenueHours[] {
-  return [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({ id: uid(), venueId, dayOfWeek, openTime: "00:00", closeTime: "23:59" }));
+  return [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
+    id: uid(),
+    venueId,
+    dayOfWeek,
+    isClosed: false,
+    openTime: "00:00",
+    closeTime: "23:59",
+    source: "SEED" as const,
+    lastVerifiedAt: null,
+  }));
 }
 
 function showcaseVenue(existingCount: number, fields: {
@@ -608,7 +620,7 @@ async function main() {
     const history = venueSignalSnapshots.filter((s) => s.venueId === venue.id);
     const friendsPresentCount = presenceEvents.filter((p) => p.venueId === venue.id && p.status === "AT_VENUE").length;
 
-    const result = calculatePulseScore({ venue, now, reports, baselines, events, friendsPresentCount, history, trustScores });
+    const result = calculatePulseScore({ venue, now, reports, baselines, events, friendsPresentCount, history, trustScores, effectiveHours: venue.hours });
     venueSignalSnapshots.push({
       id: uid(),
       venueId: venue.id,

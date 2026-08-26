@@ -1,4 +1,4 @@
-import type { VenueType } from "@/types";
+import type { ContributorLevelName, VenueType, XpRewardType } from "@/types";
 
 export const MAP_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
@@ -121,3 +121,53 @@ export const VENUE_TYPE_LABELS: Record<VenueType, string> = {
 
 export const DEMO_CITY = "New York City";
 export const DEMO_TIMEZONE = "America/New_York";
+
+// ---- opening hours ----
+
+export const HOURS_VERIFIED_FRESH_DAYS = 60;
+export const HOURS_VERIFIED_STALE_DAYS = 120;
+export const HOURS_DISCREPANCY_WINDOW_MINUTES = 30;
+
+// ---- gamification: PULSE XP ----
+// Reward values are server-decided (never trusted from the client) — see
+// src/lib/gamification/xp.ts, the only place these are read.
+export const XP_VALUES: Record<XpRewardType, number> = {
+  I_AM_HERE: 10,
+  CROWD_REPORT: 15,
+  WAIT_REPORT: 10,
+  ENERGY_REPORT: 8,
+  LIVE_NOTE: 8,
+  FIRST_REPORT_TONIGHT: 20,
+  SIGNAL_CONFIRMED: 10,
+  VENUE_CORRECTION: 20,
+} as const;
+
+export const FIRST_REPORT_TONIGHT_WINDOW_HOURS = 6;
+
+export const CONTRIBUTOR_LEVELS: Array<{ name: ContributorLevelName; label: string; minXp: number }> = [
+  { name: "EXPLORER", label: "Explorer", minXp: 0 },
+  { name: "SCOUT", label: "Scout", minXp: 100 },
+  { name: "INSIDER", label: "Insider", minXp: 350 },
+  { name: "LOCAL", label: "Local", minXp: 1000 },
+  { name: "PULSE_PRO", label: "Pulse Pro", minXp: 2500 },
+];
+
+export const NEIGHBORHOOD_INSIDER_XP_THRESHOLD = 150;
+export const CITY_SCOUT_MIN_NEIGHBORHOODS = 3;
+export const ON_THE_PULSE_DISTINCT_DAYS = 3;
+export const NIGHT_OWL_MIN_COUNT = 5;
+export const LINE_SAVER_MIN_COUNT = 3;
+export const TREND_SPOTTER_MIN_CONFIRMED = 3;
+
+// Delayed accuracy confirmation (§5/§33 of the gamification spec) — a report is
+// eligible for a "your signal was confirmed" bonus once it's aged into this window and
+// enough later reports at the same venue landed close to its value. See
+// src/lib/gamification/consensus.ts.
+export const SIGNAL_CONFIRMATION_MIN_AGE_MINUTES = 20;
+export const SIGNAL_CONFIRMATION_MAX_AGE_MINUTES = 45;
+export const SIGNAL_CONFIRMATION_MIN_CORROBORATING_REPORTS = 3;
+export const SIGNAL_CONFIRMATION_MAX_VALUE_DELTA = 20;
+
+// Pulse impact messaging (§32) — thresholds for "you moved the score" vs "confidence increased".
+export const IMPACT_SCORE_DELTA_THRESHOLD = 3;
+export const IMPACT_CONFIDENCE_DELTA_THRESHOLD = 5;
