@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { VenueWithPulse } from "@/types";
 import { MAP_REFRESH_MS, VENUE_DETAIL_REFRESH_MS } from "@/config/constants";
 import type { ExploreSection } from "@/lib/pulse/explore";
@@ -45,6 +45,11 @@ export function useVenuesInBounds(
     },
     enabled: !!bounds,
     refetchInterval: MAP_REFRESH_MS,
+    // Every pan/zoom changes `bounds`, which is part of the query key — without this,
+    // React Query treats it as a brand-new query and `data` goes undefined while it
+    // fetches, so the map flashes empty (very visible at ~4-5s response times) until
+    // the new bounds' venues load. Keep showing the last-known venues in the meantime.
+    placeholderData: keepPreviousData,
   });
 }
 
