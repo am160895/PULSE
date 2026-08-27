@@ -72,6 +72,17 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
     map.on("moveend", emitBounds);
     renderMarkersRef.current = renderMarkers;
 
+    // MapLibre measures its container's actual pixel size once at construction and never
+    // re-checks on its own — if the container hadn't finished settling into its final
+    // layout size at that exact moment (observed: the map appears blank/emptied of
+    // markers on first load, and only switching tabs away and back — which forces the
+    // browser to repaint — fixes it), the canvas stays sized for that stale measurement
+    // forever. A ResizeObserver catches the container's real size whenever it changes,
+    // including the very first settle right after mount, and tells the map to re-measure
+    // and redraw — the standard fix for this class of MapLibre/Mapbox GL bug.
+    const resizeObserver = new ResizeObserver(() => map.resize());
+    resizeObserver.observe(containerRef.current);
+
     // getBounds()/getZoom() are synchronously valid right after construction — don't
     // make the first render of markers wait on the `load` event, which fires on a
     // requestAnimationFrame callback and can be delayed by the browser (backgrounded
@@ -155,6 +166,7 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
     }
 
     return () => {
+      resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
     };
