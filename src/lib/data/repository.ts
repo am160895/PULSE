@@ -420,6 +420,11 @@ export async function searchVenues(query: string): Promise<Venue[]> {
     `neighborhood.ilike.%${escaped}%`,
     `category.ilike.%${escaped}%`,
     `music_type.ilike.%${escaped}%`,
+    // City match matters now that coverage spans more than one city (e.g. "Jersey City")
+    // — without it, a search for the city name only surfaces venues whose neighborhood
+    // string happens to repeat it (e.g. "Downtown Jersey City"), missing others in the
+    // same city with a differently-named neighborhood (e.g. "Newark Avenue").
+    `city.ilike.%${escaped}%`,
   ];
 
   // venue_type is a Postgres enum column — ilike (~~*) has no defined operator for enums,
