@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentSession } from "@/lib/auth";
+import { anonymousSessionError, getCurrentSession } from "@/lib/auth";
 import { submitReport } from "@/lib/reports/submitReport";
 import { detectRepetitivePattern } from "@/lib/reports/trust";
 import {
@@ -20,6 +20,7 @@ import { FIRST_REPORT_TONIGHT_WINDOW_HOURS } from "@/config/constants";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getCurrentSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.isAnonymous) return anonymousSessionError();
 
   const { id: venueId } = await params;
   const venue = await getVenueById(venueId);

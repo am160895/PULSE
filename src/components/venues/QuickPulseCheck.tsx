@@ -31,6 +31,7 @@ interface Props {
   venueId: string;
   onClose: () => void;
   onSubmitted: (result: ReportSubmitResult) => void;
+  onAnonymous: () => void;
 }
 
 /**
@@ -42,7 +43,7 @@ interface Props {
  * parallel data model to maintain. Entirely optional: closing or skipping at any point
  * loses nothing already earned from I'm Here itself.
  */
-export function QuickPulseCheck({ venueId, onClose, onSubmitted }: Props) {
+export function QuickPulseCheck({ venueId, onClose, onSubmitted, onAnonymous }: Props) {
   const [step, setStep] = useState(0);
   const [crowdLevel, setCrowdLevel] = useState<CrowdLevel | null>(null);
   const [waitLevel, setWaitLevel] = useState<WaitLevel | null>(null);
@@ -62,6 +63,10 @@ export function QuickPulseCheck({ venueId, onClose, onSubmitted }: Props) {
 
     if (!result.ok) {
       setSubmitting(false);
+      if (result.code === "ANONYMOUS_SESSION") {
+        onAnonymous();
+        return;
+      }
       setError(result.error);
       return;
     }

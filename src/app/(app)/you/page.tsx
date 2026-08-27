@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Bell, ChevronRight, Shield } from "lucide-react";
 import { getCurrentSession } from "@/lib/auth";
 import { LogoutButton } from "@/components/ui/LogoutButton";
+import { AnonymousGate } from "@/components/ui/AnonymousGate";
 import { ProgressBar } from "@/components/gamification/ProgressBar";
 import { BadgeMedallion } from "@/components/gamification/BadgeMedallion";
 import { BADGE_CATALOG, neighborhoodBadgeDisplayName } from "@/lib/gamification/badgeCatalog";
@@ -26,6 +27,9 @@ function monthStartIso(now: Date): string {
 export default async function YouPage() {
   const session = await getCurrentSession();
   if (!session) redirect("/login");
+  if (session.isAnonymous) {
+    return <AnonymousGate next="/you" title="Track your PULSE profile" body="Create an account to earn XP, unlock badges, and build your neighborhood reputation." />;
+  }
 
   const now = new Date();
   const [progress, neighborhoods, badges, recentEvents] = await Promise.all([

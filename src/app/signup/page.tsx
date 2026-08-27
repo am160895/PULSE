@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Radio } from "lucide-react";
 import { requestJson } from "@/lib/http/requestJson";
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({ email: "", password: "", displayName: "", username: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,7 +31,7 @@ export default function SignupPage() {
       setError(result.error);
       return;
     }
-    router.push("/map");
+    router.push(searchParams.get("next") || "/map");
     router.refresh();
   }
 
@@ -65,7 +74,10 @@ export default function SignupPage() {
         </div>
         <p className="text-center text-sm text-[var(--text-secondary)] mt-4">
           Already have an account?{" "}
-          <Link href="/login" className="text-[var(--text)] font-medium">
+          <Link
+            href={searchParams.get("next") ? `/login?next=${encodeURIComponent(searchParams.get("next")!)}` : "/login"}
+            className="text-[var(--text)] font-medium"
+          >
             Log in
           </Link>
         </p>

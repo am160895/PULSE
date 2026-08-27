@@ -46,10 +46,7 @@ function LoginForm() {
           PULSE
         </div>
         <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-6">
-          <h2 className="mb-1">Log in</h2>
-          <p className="text-[13px] text-[var(--text-secondary)] mb-5">
-            Demo account: demo@pulse.app / pulsedemo123
-          </p>
+          <h2 className="mb-5">Log in</h2>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <input
               type="email"
@@ -77,7 +74,10 @@ function LoginForm() {
         </div>
         <p className="text-center text-sm text-[var(--text-secondary)] mt-4">
           New here?{" "}
-          <Link href="/signup" className="text-[var(--text)] font-medium">
+          <Link
+            href={searchParams.get("next") ? `/signup?next=${encodeURIComponent(searchParams.get("next")!)}` : "/signup"}
+            className="text-[var(--text)] font-medium"
+          >
             Create an account
           </Link>
         </p>

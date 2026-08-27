@@ -9,7 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen pb-16">
       {children}
-      <BottomNav />
+      <BottomNav isAnonymous={session.isAnonymous} />
     </div>
   );
 }

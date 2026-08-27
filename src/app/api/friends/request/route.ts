@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentSession } from "@/lib/auth";
+import { anonymousSessionError, getCurrentSession } from "@/lib/auth";
 import { createFriendRequest, getProfileByUsername } from "@/lib/data/social";
 
 const schema = z.object({ username: z.string().min(1) });
@@ -8,6 +8,7 @@ const schema = z.object({ username: z.string().min(1) });
 export async function POST(request: Request) {
   const session = await getCurrentSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.isAnonymous) return anonymousSessionError();
 
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Enter a username" }, { status: 400 });

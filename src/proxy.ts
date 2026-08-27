@@ -43,6 +43,25 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
+    // Anonymous browsing: mint a session-less visitor an anonymous Supabase Auth session
+    // (a real profiles row gets auto-provisioned for it — see getCurrentSession()) rather
+    // than forcing login just to view the map. Restricted to top-level navigations
+    // (Sec-Fetch-Mode: navigate) — a fresh browser's first pageload fires several
+    // concurrent requests before any of them has a cookie yet; minting on every one of
+    // those would create a separate orphaned anonymous identity per request, with only one
+    // winning the cookie jar. Letting only the navigation mint a session means the others
+    // just fall back to today's redirect/401 until the navigation's cookie lands and a
+    // refetch picks it up.
+    if (request.headers.get("sec-fetch-mode") === "navigate") {
+      const { data: anon, error: anonError } = await supabase.auth.signInAnonymously();
+      // Falls through to `return response` below on success — signInAnonymously() drives
+      // the same setAll() cookie-writing path as a token refresh, so `response` already
+      // carries the new session's Set-Cookie by the time we return it.
+      if (!anonError && anon.user) return response;
+      // Anonymous sign-ins disabled in the Supabase project (or some other failure) — fall
+      // through to the pre-existing login-required behavior below rather than breaking.
+    }
+
     if (pathname.startsWith("/api")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import type {
   Friendship,
   FriendshipStatus,
@@ -142,6 +143,61 @@ export async function createUserWithProfile(fields: {
   );
 
   return profile;
+}
+
+/**
+ * Provisions a lightweight "Guest" profile for a first-seen anonymous Supabase Auth user
+ * (see getCurrentSession() in lib/auth/index.ts). Deliberately NOT a call into
+ * createUserWithProfile above: that function derives `role` from comparing `email` against
+ * INITIAL_ADMIN_EMAIL, and a guest has no real email — passing a placeholder risks a false
+ * match (e.g. if INITIAL_ADMIN_EMAIL is ever set to an empty string in a deploy platform's
+ * env UI) silently granting ADMIN. This function hardcodes role: "USER" and never compares
+ * against INITIAL_ADMIN_EMAIL at all.
+ */
+export async function provisionGuestProfile(authUserId: string): Promise<Profile | null> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const username = `guest_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+    const { data, error } = await supabaseAdmin()
+      .from("profiles")
+      .insert({
+        auth_user_id: authUserId,
+        username,
+        display_name: "Guest",
+        home_city: "New York City",
+        interests: [],
+        role: "USER",
+      })
+      .select()
+      .single();
+
+    if (error) {
+      // 23505: username collision — regenerate and retry once, then give up. Astronomically
+      // unlikely at 12 hex chars (~48 bits), but a collision here would otherwise leave this
+      // visitor's browser holding an anonymous auth session with no matching profiles row
+      // forever (getCurrentSession() would find `user` but never a profile). Returning null
+      // instead lets the caller degrade to "no session" for this request — self-heals on the
+      // visitor's next request, which mints a fresh anonymous session.
+      if (error.code === "23505" && attempt === 0) continue;
+      console.error("provisionGuestProfile failed:", error.message);
+      return null;
+    }
+
+    const profile = rowToProfile(data);
+    unwrap(await supabaseAdmin().from("user_trust_scores").insert({ user_id: profile.id, trust_score: TRUST_SCORE_DEFAULT }));
+    const prefs = defaultPresencePreferences(profile.id, profile.createdAt);
+    unwrap(
+      await supabaseAdmin().from("presence_preferences").insert({
+        user_id: prefs.userId,
+        default_visibility: prefs.defaultVisibility,
+        allow_venue_presence: prefs.allowVenuePresence,
+        allow_nearby_presence: prefs.allowNearbyPresence,
+        allow_recent_presence: prefs.allowRecentPresence,
+        presence_timeout_minutes: prefs.presenceTimeoutMinutes,
+      })
+    );
+    return profile;
+  }
+  return null;
 }
 
 export async function getProfileByAuthUserId(authUserId: string): Promise<Profile | undefined> {

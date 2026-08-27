@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentSession } from "@/lib/auth";
+import { anonymousSessionError, getCurrentSession } from "@/lib/auth";
 import { getVenueById } from "@/lib/data/repository";
 import {
   createPresenceEvent,
@@ -50,6 +50,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await getCurrentSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.isAnonymous) return anonymousSessionError();
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -94,6 +95,7 @@ export async function POST(request: Request) {
 export async function DELETE() {
   const session = await getCurrentSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.isAnonymous) return anonymousSessionError();
 
   await endPresence(session.profile.id);
   return NextResponse.json({ ok: true });

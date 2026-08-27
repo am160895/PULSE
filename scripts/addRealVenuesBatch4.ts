@@ -8,9 +8,9 @@
 import { createVenueAdmin, listAllVenuesForAdmin } from "../src/lib/data/repository";
 import type { NewVenueInput } from "../src/lib/data/repository";
 import type { VenueType } from "../src/types";
+import { geocode } from "../src/lib/geo/nominatim";
 
 const TIMEZONE = "America/New_York";
-const NOMINATIM_USER_AGENT = "PULSE-nightlife-app/1.0 (one-time venue import script)";
 
 interface SourceVenue {
   name: string;
@@ -37,21 +37,6 @@ const VENUES: SourceVenue[] = [
   { name: "Lovers of Today", neighborhood: "East Village", address: "Lovers of Today, East Village, New York, NY", venueType: "BAR" },
   { name: "Mister Paradise", neighborhood: "East Village", address: "Mister Paradise, East Village, New York, NY", venueType: "BAR" },
 ];
-
-async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
-  let res: Response;
-  try {
-    res = await fetch(url, { headers: { "User-Agent": NOMINATIM_USER_AGENT } });
-  } catch {
-    return null;
-  }
-  if (!res.ok) return null;
-  const results = (await res.json()) as Array<{ lat: string; lon: string }>;
-  const first = results[0];
-  if (!first) return null;
-  return { lat: Number(first.lat), lng: Number(first.lon) };
-}
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

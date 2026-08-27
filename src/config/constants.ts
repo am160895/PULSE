@@ -185,3 +185,8 @@ export const VS_TYPICAL_THRESHOLDS = { muchBusier: 30, busier: 12, quieter: -12,
 export const BEST_BET_MIN_SCORE = 60;
 export const BEST_BET_MAX_DISTANCE_METERS = 3000;
 export const BEST_BET_MIN_MINUTES_UNTIL_CLOSE = 60;
+
+// ---- admin bulk venue import ----
+// Sequential processing to respect Nominatim's 1 req/sec geocoding policy — this cap keeps
+// a single import request comfortably bounded even though there's no chunking/streaming.
+export const IMPORT_MAX_ROWS = 40;

@@ -1,4 +1,4 @@
-export type RequestResult<T> = { ok: true; data: T } | { ok: false; error: string };
+export type RequestResult<T> = { ok: true; data: T } | { ok: false; error: string; code?: string };
 
 /**
  * fetch() only rejects on network-level failure, not on HTTP error status — and a bare
@@ -18,7 +18,8 @@ export async function requestJson<T = unknown>(
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { ok: false, error: (data as { error?: string })?.error ?? `Request failed (${res.status})` };
+      const body = data as { error?: string; code?: string };
+      return { ok: false, error: body?.error ?? `Request failed (${res.status})`, code: body?.code };
     }
     return { ok: true, data: data as T };
   } catch {

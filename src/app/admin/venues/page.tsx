@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import type { Venue } from "@/types";
 import { requestJson } from "@/lib/http/requestJson";
 import { VENUE_TYPE_LABELS } from "@/config/constants";
@@ -46,9 +46,14 @@ export default function AdminVenuesPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1>Venues</h1>
-        <Link href="/admin/venues/new" className="btn btn-primary">
-          <Plus size={16} /> New venue
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/admin/venues/import" className="btn btn-secondary">
+            <Upload size={16} /> Import
+          </Link>
+          <Link href="/admin/venues/new" className="btn btn-primary">
+            <Plus size={16} /> New venue
+          </Link>
+        </div>
       </div>
 
       <input

@@ -23,6 +23,7 @@ import { ContributionSuccess, type ContributionSuccessProps } from "@/components
 import { BadgeCelebration } from "@/components/gamification/BadgeCelebration";
 import { BADGE_CATALOG } from "@/lib/gamification/badgeCatalog";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
+import { SignUpPrompt } from "@/components/ui/SignUpPrompt";
 import { VENUE_TYPE_LABELS } from "@/config/constants";
 import { requestJson } from "@/lib/http/requestJson";
 import { format, parseISO } from "date-fns";
@@ -67,6 +68,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
   const [lastOwnReportId, setLastOwnReportId] = useState<string | null>(null);
   const shownConfirmationsRef = useRef<Set<string>>(new Set());
   const [claiming, setClaiming] = useState(false);
+  const [signUpReason, setSignUpReason] = useState<string | null>(null);
 
   function celebrateNextBadge() {
     const next = badgeQueueRef.current.shift();
@@ -160,7 +162,11 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
 
   async function handleToggleSaved() {
     const result = await requestJson(`/api/venues/${venue.id}/saved`, { method: "POST" });
-    if (result.ok) invalidate(venue.id);
+    if (result.ok) {
+      invalidate(venue.id);
+    } else if (result.code === "ANONYMOUS_SESSION") {
+      setSignUpReason("Create a free account to save venues.");
+    }
   }
 
   async function handleImHere() {
@@ -173,7 +179,11 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     setImHereSubmitting(false);
 
     if (!result.ok) {
-      setImHereError(result.error);
+      if (result.code === "ANONYMOUS_SESSION") {
+        setSignUpReason("Create a free account to share when you're here.");
+      } else {
+        setImHereError(result.error);
+      }
       return;
     }
 
@@ -216,7 +226,11 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     setClaiming(true);
     const result = await requestJson<{ status: string }>(`/api/venues/${venue.id}/claim`, { method: "POST" });
     setClaiming(false);
-    if (result.ok) refetch();
+    if (result.ok) {
+      refetch();
+    } else if (result.code === "ANONYMOUS_SESSION") {
+      setSignUpReason("Create a free account to claim this venue.");
+    }
   }
 
   async function handleSimulateConfirmation() {
@@ -412,6 +426,10 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
             setShowReport(false);
             handleReportSubmitted(result);
           }}
+          onAnonymous={() => {
+            setShowReport(false);
+            setSignUpReason("Create a free account to report activity.");
+          }}
         />
       )}
 
@@ -423,10 +441,16 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
             setShowQuickCheck(false);
             handleReportSubmitted(result);
           }}
+          onAnonymous={() => {
+            setShowQuickCheck(false);
+            setSignUpReason("Create a free account to report activity.");
+          }}
         />
       )}
 
       {showHours && <WeeklyHoursSheet hours={venue.hours} timeZone={venue.timezone} onClose={() => setShowHours(false)} />}
+
+      {signUpReason && <SignUpPrompt reason={signUpReason} onClose={() => setSignUpReason(null)} />}
 
       {toast && <ContributionSuccess {...toast} />}
 

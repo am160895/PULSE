@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { getCurrentSession } from "@/lib/auth";
+import { anonymousSessionError, getCurrentSession } from "@/lib/auth";
 import { getVenueById, toggleSaved } from "@/lib/data/repository";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getCurrentSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.isAnonymous) return anonymousSessionError();
 
   const { id: venueId } = await params;
   if (!(await getVenueById(venueId))) return NextResponse.json({ error: "Venue not found" }, { status: 404 });

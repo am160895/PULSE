@@ -40,9 +40,10 @@ interface Props {
   venueId: string;
   onClose: () => void;
   onSubmitted: (result: ReportSubmitResult, reportedShareArrival: boolean) => void;
+  onAnonymous: () => void;
 }
 
-export function ReportSheet({ venueId, onClose, onSubmitted }: Props) {
+export function ReportSheet({ venueId, onClose, onSubmitted, onAnonymous }: Props) {
   const [crowdLevel, setCrowdLevel] = useState<CrowdLevel | null>(null);
   const [waitLevel, setWaitLevel] = useState<WaitLevel | null>(null);
   const [energyLevel, setEnergyLevel] = useState<EnergyLevel | null>(null);
@@ -72,8 +73,12 @@ export function ReportSheet({ venueId, onClose, onSubmitted }: Props) {
     });
 
     if (!result.ok) {
-      setError(result.error);
       setSubmitting(false);
+      if (result.code === "ANONYMOUS_SESSION") {
+        onAnonymous();
+        return;
+      }
+      setError(result.error);
       return;
     }
 

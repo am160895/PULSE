@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentSession } from "@/lib/auth";
+import { anonymousSessionError, getCurrentSession } from "@/lib/auth";
 import { getVenueById } from "@/lib/data/repository";
 import { createOwnershipRequest, getOwnershipRequest, recomputeVenueClaimStatus, reviveOwnershipRequest } from "@/lib/data/ownership";
 
@@ -10,6 +10,7 @@ import { createOwnershipRequest, getOwnershipRequest, recomputeVenueClaimStatus,
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getCurrentSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.isAnonymous) return anonymousSessionError();
 
   const { id } = await params;
   if (!(await getVenueById(id))) return NextResponse.json({ error: "Venue not found" }, { status: 404 });

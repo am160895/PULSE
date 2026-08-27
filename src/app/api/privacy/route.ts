@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentSession } from "@/lib/auth";
+import { anonymousSessionError, getCurrentSession } from "@/lib/auth";
 import { getPresencePreferences, listBlockedProfiles, updatePresencePreferences } from "@/lib/data/social";
 import { PRESENCE_MAX_TIMEOUT_MINUTES } from "@/config/constants";
 
@@ -27,6 +27,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const session = await getCurrentSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.isAnonymous) return anonymousSessionError();
 
   const parsed = patchSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });

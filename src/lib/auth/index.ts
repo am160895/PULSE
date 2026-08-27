@@ -1,14 +1,19 @@
 import { z } from "zod";
+import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { SupabaseQueryError } from "@/lib/supabase/unwrap";
-import { createUserWithProfile, getProfileByAuthUserId, getProfileByUsername } from "@/lib/data/social";
+import { createUserWithProfile, getProfileByAuthUserId, getProfileByUsername, provisionGuestProfile } from "@/lib/data/social";
 import { listVerifiedOwnedVenueIds } from "@/lib/data/ownership";
 import type { Profile } from "@/types";
 
 export interface Session {
   userId: string;
   profile: Profile;
+  /** True for an auto-provisioned anonymous browsing session (see src/proxy.ts) — a real
+   * profile row exists (so every existing read path works unchanged), but every write route
+   * must reject it via anonymousSessionError() below. */
+  isAnonymous: boolean;
 }
 
 export async function getCurrentSession(): Promise<Session | null> {
@@ -22,10 +27,21 @@ export async function getCurrentSession(): Promise<Session | null> {
   } = await supabase.auth.getUser();
   if (error || !user) return null;
 
-  const profile = await getProfileByAuthUserId(user.id);
+  let profile = await getProfileByAuthUserId(user.id);
+  if (!profile && user.is_anonymous) {
+    profile = (await provisionGuestProfile(user.id)) ?? undefined;
+  }
   if (!profile) return null;
 
-  return { userId: user.id, profile };
+  return { userId: user.id, profile, isAnonymous: !!user.is_anonymous };
+}
+
+/** Every write route gated by getCurrentSession() calls this once it sees
+ * session.isAnonymous — the one place this rejection response is defined, so its shape
+ * (and the "ANONYMOUS_SESSION" code the frontend keys off of to show a sign-up prompt
+ * instead of a raw error) never drifts between call sites. */
+export function anonymousSessionError() {
+  return NextResponse.json({ error: "Create an account to do that", code: "ANONYMOUS_SESSION" }, { status: 403 });
 }
 
 /** Returns the session only if it belongs to an admin — every /admin page and

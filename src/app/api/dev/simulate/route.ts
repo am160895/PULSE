@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentSession } from "@/lib/auth";
+import { anonymousSessionError, getCurrentSession } from "@/lib/auth";
 import { createReport, listVenues } from "@/lib/data/repository";
 import { listOtherProfileIds } from "@/lib/data/social";
 import { simulateReportsForVenue } from "@/lib/simulation/simulateNight";
@@ -17,6 +17,7 @@ export async function POST() {
 
   const session = await getCurrentSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.isAnonymous) return anonymousSessionError();
 
   const now = new Date();
   const reporterProfileIds = await listOtherProfileIds(session.profile.id);
