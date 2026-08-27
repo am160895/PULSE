@@ -12,6 +12,8 @@
     "seed:real2": "tsx --env-file=.env.local scripts/addRealVenuesBatch2.ts",
     "seed:real3": "tsx --env-file=.env.local scripts/addRealVenuesBatch3.ts",
     "seed:real4": "tsx --env-file=.env.local scripts/addRealVenuesBatch4.ts",
+    "backfill:hours": "tsx --env-file=.env.local scripts/backfillTypicalHours.ts",
+    "fix:hours-timestamp": "tsx --env-file=.env.local scripts/fixBackfilledHoursTimestamp.ts",
     "test": "vitest run"
   },
   "dependencies": {

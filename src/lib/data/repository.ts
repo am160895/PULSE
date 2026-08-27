@@ -241,7 +241,13 @@ async function replaceHours(venueId: string, hours: NewVenueHoursInput[]) {
           open_time: h.isClosed ? null : (h.openTime ?? null),
           close_time: h.isClosed ? null : (h.closeTime ?? null),
           source: h.source ?? "ADMIN",
-          last_verified_at: h.lastVerifiedAt ?? now,
+          // Only defaults to "now" when the caller omits the field entirely (the admin
+          // form's save path, which has no opinion on verification time) — an explicit
+          // `null` (as buildTypicalHours() passes, see lib/venues/typicalHours.ts) means
+          // "this is an unverified estimate," and must stay null, not get stamped as if a
+          // human had just confirmed it. `??` alone can't tell these apart since it treats
+          // null and undefined the same.
+          last_verified_at: h.lastVerifiedAt === undefined ? now : h.lastVerifiedAt,
         }))
       )
   );

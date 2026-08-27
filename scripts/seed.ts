@@ -15,6 +15,7 @@ import { expectedActivityScore, expectedWaitScore } from "../src/lib/simulation/
 import { simulateReportsForVenue } from "../src/lib/simulation/simulateNight";
 import { calculatePulseScore } from "../src/lib/pulse/calculatePulseScore";
 import { supabaseAdmin } from "../src/lib/supabase/admin";
+import { buildTypicalHours } from "../src/lib/venues/typicalHours";
 import type {
   CrowdLevel,
   EnergyLevel,
@@ -228,19 +229,6 @@ const CAPACITY_RANGE: Record<VenueType, [number, number]> = {
   OTHER: [50, 100],
 };
 
-// [dayOfWeek, openTime, closeTime][] — dayOfWeek 0=Sun
-const HOURS_BY_TYPE: Record<VenueType, [number, string, string][]> = {
-  CLUB: [[3, "22:00", "02:00"], [4, "22:00", "03:00"], [5, "22:00", "04:00"], [6, "22:00", "04:00"]],
-  BAR: [0, 1, 2, 3, 4, 5, 6].map((d) => [d, "16:00", d === 5 || d === 6 ? "03:00" : "02:00"]) as [number, string, string][],
-  LOUNGE: [2, 3, 4, 5, 6].map((d) => [d, "18:00", "02:00"]) as [number, string, string][],
-  ROOFTOP: [0, 1, 2, 3, 4, 5, 6].map((d) => [d, "16:00", d === 5 || d === 6 ? "01:00" : "00:00"]) as [number, string, string][],
-  RESTAURANT: [0, 1, 2, 3, 4, 5, 6].map((d) => [d, "11:30", "23:00"]) as [number, string, string][],
-  LIVE_MUSIC: [4, 5, 6, 0].map((d) => [d, "19:00", "01:00"]) as [number, string, string][],
-  CAFE: [0, 1, 2, 3, 4, 5, 6].map((d) => [d, "07:00", "19:00"]) as [number, string, string][],
-  EVENT_SPACE: [5, 6].map((d) => [d, "19:00", "01:00"]) as [number, string, string][],
-  OTHER: [0, 1, 2, 3, 4, 5, 6].map((d) => [d, "12:00", "22:00"]) as [number, string, string][],
-};
-
 const NEIGHBORHOOD_STREETS: Record<string, string[]> = {
   "west-village": ["Bleecker St", "Christopher St", "West 4th St", "Hudson St", "Greenwich St", "Perry St"],
   "greenwich-village": ["MacDougal St", "Washington Square W", "Sullivan St", "Waverly Pl"],
@@ -274,19 +262,6 @@ function weightedPick<T extends string>(rand: () => number, weights: Partial<Rec
     if (roll <= 0) return key;
   }
   return entries[entries.length - 1][0];
-}
-
-function buildHours(venueId: string, venueType: VenueType): VenueHours[] {
-  return HOURS_BY_TYPE[venueType].map(([dayOfWeek, openTime, closeTime]) => ({
-    id: uid(),
-    venueId,
-    dayOfWeek,
-    isClosed: false,
-    openTime,
-    closeTime,
-    source: "SEED" as const,
-    lastVerifiedAt: null,
-  }));
 }
 
 const usedNames = new Set<string>();
@@ -354,7 +329,16 @@ function generateBackgroundVenues(): Venue[] {
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       };
-      venue.hours = buildHours(venue.id, venueType);
+      venue.hours = buildTypicalHours(venueType).map((h) => ({
+        id: uid(),
+        venueId: venue.id,
+        dayOfWeek: h.dayOfWeek,
+        isClosed: h.isClosed ?? false,
+        openTime: h.openTime ?? null,
+        closeTime: h.closeTime ?? null,
+        source: h.source ?? "SEED",
+        lastVerifiedAt: h.lastVerifiedAt ?? null,
+      }));
       allVenues.push(venue);
     }
   }
