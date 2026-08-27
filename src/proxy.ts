@@ -74,5 +74,12 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Static assets under /public (worker scripts, images, fonts, etc.) never need an auth
+  // check — previously only favicon.ico was exempted by name, which meant every OTHER
+  // public file (e.g. maplibre-gl-worker.mjs, fetched by any MapLibre instance) still hit
+  // the gate. That was invisible as long as MapLibre only ever ran on already-authenticated
+  // pages; it broke the moment the landing page also needed it, for exactly the
+  // logged-out visitors a landing page is for. Matching by extension is the general fix —
+  // it exempts this whole class of request instead of allowlisting filenames one at a time.
+  matcher: ["/((?!_next/static|_next/image|.*\\.(?:ico|svg|png|jpg|jpeg|gif|webp|mjs|js|css|json|woff2?|ttf|map)$).*)"],
 };

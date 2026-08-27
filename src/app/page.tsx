@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, Radio, TrendingUp, Users } from "lucide-react";
 import { getCurrentSession } from "@/lib/auth";
+import { LandingMapBackground } from "@/components/LandingMapBackground";
 
 export default async function LandingPage() {
   const session = await getCurrentSession();
@@ -51,7 +52,7 @@ export default async function LandingPage() {
           </div>
 
           <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-strong)]">
-            <MapPreview />
+            <LandingMapBackground />
           </div>
         </div>
       </main>
@@ -71,37 +72,6 @@ function Benefit({ icon, title, body }: { icon: React.ReactNode; title: string; 
       </div>
       <h3 className="mb-1">{title}</h3>
       <p className="text-[13px] text-[var(--text-secondary)]">{body}</p>
-    </div>
-  );
-}
-
-function MapPreview() {
-  const dots = [
-    { x: "22%", y: "30%", score: 94, cls: "hot" },
-    { x: "58%", y: "20%", score: 81, cls: "rising" },
-    { x: "40%", y: "55%", score: 72, cls: "active" },
-    { x: "72%", y: "62%", score: 45, cls: "moderate" },
-    { x: "15%", y: "70%", score: 28, cls: "quiet" },
-    { x: "85%", y: "38%", score: 88, cls: "hot" },
-  ];
-  return (
-    <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[var(--radius-md)]" style={{ background: "#0e1116" }}>
-      <svg className="absolute inset-0 h-full w-full opacity-30" viewBox="0 0 100 100" preserveAspectRatio="none">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <line key={`h${i}`} x1="0" y1={i * 18} x2="100" y2={i * 18} stroke="var(--border)" strokeWidth="0.3" />
-        ))}
-        {Array.from({ length: 6 }).map((_, i) => (
-          <line key={`v${i}`} x1={i * 18} y1="0" x2={i * 18} y2="100" stroke="var(--border)" strokeWidth="0.3" />
-        ))}
-      </svg>
-      {dots.map((d, i) => (
-        <div key={i} className="absolute" style={{ left: d.x, top: d.y, transform: "translate(-50%, -50%)" }}>
-          {d.cls === "hot" && <div className="pulse-ring" />}
-          <div className={`venue-marker ${d.cls}`} style={{ width: 40, height: 40, fontSize: 12 }}>
-            {d.score}
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
