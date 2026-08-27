@@ -47,6 +47,11 @@ export function buildExploreSections(venues: VenueWithPulse[], now: Date): Explo
 
   const bestBet = [...open].filter((v) => isBestBetVenue(v, now)).sort((a, b) => bestBetRank(b) - bestBetRank(a));
 
+  // Distinct from Best Bet: no distance/closing-soon/trend filtering, just "of everything
+  // we have real confidence about right now, which ones are actually the highest-scoring" —
+  // a straight top-of-the-list, not an actionable "should I go here" recommendation.
+  const bestVibe = [...open].filter((v) => v.pulse.confidenceLabel === "HIGH").sort(byScoreDesc);
+
   const nearYou = venues[0]?.distanceMeters !== undefined
     ? [...open].sort((a, b) => (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity))
     : [];
@@ -77,6 +82,7 @@ export function buildExploreSections(venues: VenueWithPulse[], now: Date): Explo
 
   const sections: ExploreSection[] = [
     { key: "bestBet", title: "Best bet", venues: bestBet },
+    { key: "bestVibe", title: "Best vibe", venues: bestVibe },
     { key: "hotNow", title: "Hot now", venues: hotNow },
     { key: "risingFastest", title: "Rising fastest", venues: risingFastest },
     ...(nearYou.length ? [{ key: "nearYou", title: "Near you", venues: nearYou }] : []),

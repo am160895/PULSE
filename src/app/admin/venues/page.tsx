@@ -8,9 +8,19 @@ import { requestJson } from "@/lib/http/requestJson";
 import { VENUE_TYPE_LABELS } from "@/config/constants";
 import { LoadingDots } from "@/components/ui/States";
 
+/** ADMIN/VENUE_OWNER hours have actually been looked at by a human; SEED/GOOGLE_PLACES
+ * haven't (SEED is this app's placeholder/best-guess data, and GOOGLE_PLACES is only ever
+ * hypothetical — no code path writes it, see lib/geo/nominatim.ts's own free-only stance).
+ * No hours at all is its own "needs review" case, not lumped in with "verified." */
+function hoursNeedsReview(venue: Venue): boolean {
+  if (venue.hours.length === 0) return true;
+  return venue.hours.some((h) => h.source !== "ADMIN" && h.source !== "VENUE_OWNER");
+}
+
 export default function AdminVenuesPage() {
   const [venues, setVenues] = useState<Venue[] | null>(null);
   const [query, setQuery] = useState("");
+  const [needsReviewOnly, setNeedsReviewOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function load() {
@@ -25,9 +35,12 @@ export default function AdminVenuesPage() {
   const filtered = useMemo(() => {
     if (!venues) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return venues;
-    return venues.filter((v) => v.name.toLowerCase().includes(q) || v.neighborhood.toLowerCase().includes(q));
-  }, [venues, query]);
+    return venues
+      .filter((v) => !q || v.name.toLowerCase().includes(q) || v.neighborhood.toLowerCase().includes(q))
+      .filter((v) => !needsReviewOnly || hoursNeedsReview(v));
+  }, [venues, query, needsReviewOnly]);
+
+  const needsReviewCount = useMemo(() => venues?.filter(hoursNeedsReview).length ?? 0, [venues]);
 
   async function toggleActive(venue: Venue) {
     const result = await requestJson(`/api/admin/venues/${venue.id}`, { method: "PATCH", body: { isActive: !venue.isActive } });
@@ -56,12 +69,18 @@ export default function AdminVenuesPage() {
         </div>
       </div>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search venues..."
-        className="input mb-4 max-w-sm"
-      />
+      <div className="flex items-center gap-4 mb-4">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search venues..."
+          className="input max-w-sm"
+        />
+        <label className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)] whitespace-nowrap">
+          <input type="checkbox" checked={needsReviewOnly} onChange={(e) => setNeedsReviewOnly(e.target.checked)} />
+          Needs hours review ({needsReviewCount})
+        </label>
+      </div>
 
       {error && <p className="text-sm mb-4" style={{ color: "var(--danger)" }}>{error}</p>}
       {!venues && <LoadingDots />}
@@ -75,6 +94,7 @@ export default function AdminVenuesPage() {
                 <th>Type</th>
                 <th>Neighborhood</th>
                 <th>Source</th>
+                <th>Hours</th>
                 <th>Status</th>
                 <th></th>
               </tr>
@@ -90,6 +110,11 @@ export default function AdminVenuesPage() {
                   <td>{VENUE_TYPE_LABELS[v.venueType]}</td>
                   <td>{v.neighborhood}</td>
                   <td>{v.externalPlaceId ? "Google" : "Manual"}</td>
+                  <td>
+                    <span className={`badge ${hoursNeedsReview(v) ? "badge-low" : "badge-high"}`}>
+                      {v.hours.length === 0 ? "No hours" : hoursNeedsReview(v) ? "Unverified" : "Verified"}
+                    </span>
+                  </td>
                   <td>
                     <button onClick={() => toggleActive(v)} className={`badge ${v.isActive ? "badge-high" : "badge-low"}`} style={{ border: "none", cursor: "pointer" }}>
                       {v.isActive ? "Active" : "Inactive"}

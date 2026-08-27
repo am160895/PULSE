@@ -110,4 +110,12 @@ describe("applyImportDefaults", () => {
     const built = applyImportDefaults(rows[0], { lat: 0, lng: 0 });
     expect(built.priceLevel).toBe(4);
   });
+
+  it("derives city/state/postal from the address instead of hardcoding New York, NY — e.g. for NJ venues", () => {
+    const { rows } = parsePasteImport("Zeppelin Hall | 88 Liberty View Dr, Jersey City, NJ 07305 | BAR | Downtown Jersey City");
+    const built = applyImportDefaults(rows[0], { lat: 40.7, lng: -74.0 });
+    expect(built.city).toBe("Jersey City");
+    expect(built.state).toBe("NJ");
+    expect(built.postalCode).toBe("07305");
+  });
 });

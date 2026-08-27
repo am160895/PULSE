@@ -69,6 +69,14 @@ export default function MapPage() {
 
   const selectedVenue = venues.find((v) => v.id === selectedId) ?? null;
 
+  // "Open now" legitimately returns zero results outside nightlife hours (e.g. mid-morning,
+  // when almost nothing is open) — a blank map with no explanation reads as broken, not as
+  // "correctly nothing's open right now." Only shown for OPEN_NOW specifically: other
+  // filters (Hot now, Rising, etc.) returning zero is a normal, self-explanatory outcome
+  // that doesn't need this treatment.
+  const dataLoaded = query.trim() ? searchVenues !== undefined : boundsVenues !== undefined;
+  const showNothingOpenState = dataLoaded && venues.length === 0 && activeFilters.has("OPEN_NOW") && !query.trim();
+
   // OPEN_NOW and LATER_TONIGHT are opposite views of the map (currently open vs
   // currently closed) — active together they'd always show nothing, so selecting one
   // clears the other rather than silently producing an empty map.
@@ -111,6 +119,17 @@ export default function MapPage() {
         coverage={coverage}
         onCoverageChange={setCoverage}
       />
+      {showNothingOpenState && (
+        <div className="fixed left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 px-6 text-center">
+          <p className="mb-3 text-[14px] text-[var(--text-secondary)]" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.8)" }}>
+            Nothing&apos;s open right now — check back tonight, or browse everything.
+          </p>
+          <button className="btn btn-secondary" onClick={() => toggleFilter("OPEN_NOW")}>
+            Show all places
+          </button>
+        </div>
+      )}
+
       {selectedVenue ? (
         <VenueBottomSheet venue={selectedVenue} onClose={() => setSelectedId(null)} onToggleSaved={handleToggleSaved} />
       ) : (

@@ -171,10 +171,24 @@ export function parseCsvImport(raw: string): ImportParseResult {
   return { rows, issues };
 }
 
+/** Pulls "City, ST" (and an optional trailing ZIP) off the end of a US street address —
+ * e.g. "123 Main St, Hoboken, NJ 07030" → { city: "Hoboken", state: "NJ", postalCode:
+ * "07030" }. Falls back to this app's NYC launch-market default only when the address
+ * doesn't parse, rather than silently mislabeling every imported venue as New York, NY
+ * regardless of where it actually is. */
+function parseCityState(address: string): { city: string; state: string; postalCode: string } {
+  const match = address.match(/,\s*([A-Za-z .'-]+?),\s*([A-Za-z]{2})\s*(\d{5})?\s*$/);
+  if (match) return { city: match[1].trim(), state: match[2].toUpperCase(), postalCode: match[3] ?? "" };
+  return { city: "New York", state: "NY", postalCode: "" };
+}
+
 /** Same defaults VenueForm.tsx's own manual-entry form already applies when a field isn't
  * supplied — kept in one place so the import path and the manual-entry path never drift
- * apart on what "reasonable default" means for this app's NYC-only venue set. */
+ * apart on what "reasonable default" means. City/state/postal are parsed from the address
+ * itself (see parseCityState) rather than hardcoded, now that this app covers more than
+ * just Manhattan. */
 export function applyImportDefaults(row: ImportSourceRow, coords: { lat: number; lng: number }) {
+  const { city, state, postalCode } = parseCityState(row.address);
   return {
     name: row.name,
     category: "Nightlife",
@@ -182,9 +196,9 @@ export function applyImportDefaults(row: ImportSourceRow, coords: { lat: number;
     venueType: row.venueType,
     neighborhood: row.neighborhood,
     streetAddress: row.address,
-    city: "New York",
-    state: "NY",
-    postalCode: "",
+    city,
+    state,
+    postalCode,
     latitude: coords.lat,
     longitude: coords.lng,
     timezone: "America/New_York",
