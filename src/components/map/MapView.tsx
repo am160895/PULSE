@@ -144,7 +144,17 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
           const isDeemphasized = isDirectory || venue.currentPulseStatus === "CLOSED";
           const cls = isDeemphasized ? "directory" : markerClassForLabel(venue.pulse.pulseLabel);
           const wrapper = document.createElement("div");
+          // inline-block, not the default block: MapLibre re-purposes this element AS its
+          // own `.maplibregl-marker` container rather than wrapping it in a new one, and a
+          // plain block-level div with no explicit width stretches to fill that marker
+          // container's containing block — the full map width. Harmless for the marker
+          // circle itself (it has its own fixed 44px size), but .pulse-ring's `inset: -6px`
+          // resolves against WRAPPER's size, not the circle's, so it rendered as a
+          // ~1000px-wide glowing oval across the bottom of the map instead of a small ring
+          // around one marker. inline-block shrink-wraps to the marker circle's actual
+          // size, which fixes both.
           wrapper.style.position = "relative";
+          wrapper.style.display = "inline-block";
           if (cls === "hot" || cls === "rising") {
             const ring = document.createElement("div");
             ring.className = `pulse-ring ${cls === "rising" ? "rising" : ""}`;
