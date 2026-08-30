@@ -3,26 +3,16 @@
 import { useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
-export type MapFilter =
-  | "OPEN_NOW"
-  | "HOT"
-  | "RISING"
-  | "BEST_BET"
-  | "FRIENDS"
-  | "NO_LINE"
-  | "LATER_TONIGHT"
-  | "BAR"
-  | "CLUB"
-  | "ROOFTOP"
-  | "LIVE_MUSIC";
+export type MapFilter = "HOT" | "RISING" | "BEST_BET" | "FRIENDS" | "NO_LINE" | "LATER_TONIGHT" | "BAR" | "CLUB" | "ROOFTOP" | "LIVE_MUSIC";
+
+export type OpenFilterMode = "OPEN_NOW" | "ALL";
 
 // Primary layer stays on screen at all times (§11: reduce filter overload); everything
-// else lives behind "More" so the first screen isn't a wall of chips. The map shows every
-// known venue by default (open and closed both) — "Open now" is an optional narrowing
-// filter, not a forced default, so a quiet map at 3pm still reads as "here's everything,"
-// not "nothing to show."
+// else lives behind "More" so the first screen isn't a wall of chips. Open now/All is its
+// own segmented control, not a chip among the others — it's the one filter that changes
+// what "the map" even means (only-open vs everything), so it needs to read as a clear,
+// permanent two-state choice, not something easy to miss in a scrollable chip row.
 const PRIMARY_FILTERS: { key: MapFilter; label: string }[] = [
-  { key: "OPEN_NOW", label: "Open now" },
   { key: "HOT", label: "Hot now" },
   { key: "RISING", label: "Rising" },
   { key: "BEST_BET", label: "Best bet" },
@@ -43,9 +33,11 @@ interface Props {
   onQueryChange: (q: string) => void;
   active: Set<MapFilter>;
   onToggle: (f: MapFilter) => void;
+  openFilterMode: OpenFilterMode;
+  onOpenFilterModeChange: (mode: OpenFilterMode) => void;
 }
 
-export function MapSearchAndFilters({ query, onQueryChange, active, onToggle }: Props) {
+export function MapSearchAndFilters({ query, onQueryChange, active, onToggle, openFilterMode, onOpenFilterModeChange }: Props) {
   const [showMore, setShowMore] = useState(false);
   const activeSecondaryCount = SECONDARY_FILTERS.filter((f) => active.has(f.key)).length;
 
@@ -67,6 +59,24 @@ export function MapSearchAndFilters({ query, onQueryChange, active, onToggle }: 
       </div>
 
       <div className="filter-row" style={{ top: "calc(env(safe-area-inset-top) + 66px)" }}>
+        <div className="flex rounded-full p-0.5 shrink-0" style={{ background: "rgba(17,21,26,0.94)", border: "1px solid var(--border)" }}>
+          {(["OPEN_NOW", "ALL"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => onOpenFilterModeChange(mode)}
+              aria-pressed={openFilterMode === mode}
+              className="filter-chip"
+              style={{
+                border: "none",
+                background: openFilterMode === mode ? "var(--text)" : "transparent",
+                color: openFilterMode === mode ? "var(--bg)" : "var(--text-secondary)",
+              }}
+            >
+              {mode === "OPEN_NOW" ? "Open now" : "All"}
+            </button>
+          ))}
+        </div>
+
         {PRIMARY_FILTERS.map((f) => (
           <button
             key={f.key}

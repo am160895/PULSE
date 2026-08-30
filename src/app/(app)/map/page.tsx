@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { MapView } from "@/components/map/MapView";
-import { MapSearchAndFilters, type MapFilter } from "@/components/map/MapSearchAndFilters";
+import { MapSearchAndFilters, type MapFilter, type OpenFilterMode } from "@/components/map/MapSearchAndFilters";
 import { VenueBottomSheet } from "@/components/venues/VenueBottomSheet";
 import { BestBetStrip } from "@/components/map/BestBetStrip";
 import { OnboardingBanner } from "@/components/map/OnboardingBanner";
@@ -19,6 +19,10 @@ export default function MapPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeFilters, setActiveFilters] = useState<Set<MapFilter>>(new Set());
+  // Defaults to open-only — the map is meant to answer "where's actually open right now,"
+  // and closed venues cluttering the default view undercut that. "All" is one tap away for
+  // anyone who wants the full directory, closed ones clearly greyed out (see MapView).
+  const [openFilterMode, setOpenFilterMode] = useState<OpenFilterMode>("OPEN_NOW");
   const invalidate = useInvalidateVenue();
 
   const { data: boundsVenues } = useVenuesInBounds(bounds, userLocation);
@@ -39,10 +43,13 @@ export default function MapPage() {
     if (searching) return base;
 
     const filtered = base.filter((v) => {
+      // Excludes venues we're actually confident are closed — never venues with simply no
+      // hours on file, since absence of hours data isn't evidence of being closed. "Later
+      // tonight" is the one deliberate exception, even while in Open-now mode — that view
+      // exists specifically to surface closed-but-opening-later venues.
+      if (openFilterMode === "OPEN_NOW" && isClosedState(v) && !activeFilters.has("LATER_TONIGHT")) return false;
+
       for (const f of activeFilters) {
-        // Excludes venues we're actually confident are closed — never venues with simply
-        // no hours on file, since absence of hours data isn't evidence of being closed.
-        if (f === "OPEN_NOW" && isClosedState(v)) return false;
         if (f === "HOT" && v.pulse.pulseLabel !== "HOT_NOW") return false;
         if (f === "RISING" && v.pulse.trend !== "RISING" && v.pulse.trend !== "RISING_FAST") return false;
         // Same predicate the Explore tab's Best Bet section uses (lib/pulse/explore.ts) —
@@ -68,27 +75,21 @@ export default function MapPage() {
       const bTime = b.openStatus.nextOpenAt ? new Date(b.openStatus.nextOpenAt).getTime() : Infinity;
       return aTime - bTime;
     });
-  }, [boundsVenues, searchVenues, query, activeFilters]);
+  }, [boundsVenues, searchVenues, query, activeFilters, openFilterMode]);
 
   const selectedVenue = venues.find((v) => v.id === selectedId) ?? null;
 
-  // Only relevant when "Open now" is actively selected — the map shows everything by
-  // default, so a quiet, mostly-closed hour reads as "here's everything" rather than a
-  // blank map. Once someone opts into Open now, though, a genuinely empty result (e.g.
-  // mid-morning) needs the same explanation as before, or it just looks broken.
+  // Only relevant in "Open now" mode (the default) — a genuinely empty result (e.g. a quiet
+  // mid-morning hour with nothing open) needs an explanation, or the map just looks broken.
   const dataLoaded = query.trim() ? searchVenues !== undefined : boundsVenues !== undefined;
-  const showNothingOpenState = dataLoaded && venues.length === 0 && !query.trim() && activeFilters.has("OPEN_NOW");
+  const showNothingOpenState = dataLoaded && venues.length === 0 && !query.trim() && openFilterMode === "OPEN_NOW";
 
-  // OPEN_NOW and LATER_TONIGHT are opposite views (currently open vs currently closed) —
-  // active together they'd always show nothing, so selecting one clears the other.
   function toggleFilter(f: MapFilter) {
     setActiveFilters((prev) => {
       const next = new Set(prev);
       if (next.has(f)) {
         next.delete(f);
       } else {
-        if (f === "OPEN_NOW") next.delete("LATER_TONIGHT");
-        if (f === "LATER_TONIGHT") next.delete("OPEN_NOW");
         next.add(f);
       }
       return next;
@@ -116,7 +117,14 @@ export default function MapPage() {
         onBoundsChange={setBounds}
         onUserLocation={setUserLocation}
       />
-      <MapSearchAndFilters query={query} onQueryChange={setQuery} active={activeFilters} onToggle={toggleFilter} />
+      <MapSearchAndFilters
+        query={query}
+        onQueryChange={setQuery}
+        active={activeFilters}
+        onToggle={toggleFilter}
+        openFilterMode={openFilterMode}
+        onOpenFilterModeChange={setOpenFilterMode}
+      />
       <OnboardingBanner />
       {showNothingOpenState && (
         <div className="fixed left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 px-6 text-center">
