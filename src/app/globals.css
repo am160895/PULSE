@@ -366,19 +366,19 @@ button {
   }
 }
 
-/* Newly-added markers (every pan/zoom/data-refresh removes and re-creates the full marker
-   set — see MapView.tsx's renderMarkers()) fade and settle in instead of popping into
-   existence instantly, so panning/zooming and tapping a cluster to expand it both feel
-   like one continuous motion rather than a flicker of old markers vanishing and new ones
-   snapping in. */
+/* Genuinely new markers (renderMarkers() in MapView.tsx reconciles in place otherwise, so
+   this never replays on an ordinary poll/pan/selection update) fade and settle in instead
+   of popping into existence instantly. Short and close-to-full-size on purpose — this is
+   the very first thing a visitor sees the map "do," so it needs to read as immediate, not
+   as a deliberate reveal. */
 .venue-marker,
 .cluster-marker {
-  animation: marker-in 180ms ease-out;
+  animation: marker-in 110ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes marker-in {
   from {
-    transform: scale(0.5);
+    transform: scale(0.86);
     opacity: 0;
   }
   to {
