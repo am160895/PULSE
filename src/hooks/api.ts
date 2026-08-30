@@ -74,7 +74,11 @@ export function useVenue(id: string) {
 
 export interface HistoryPoint {
   time: string;
-  score: number;
+  /** Absent for forecast points — the real observed score, only ever known for the past. */
+  actual?: number;
+  /** The historical-baseline projection for this exact time, plotted across the whole
+   * range (past included) so it visibly overlaps "actual" until a real report diverges it. */
+  typical: number;
 }
 
 export function useVenueHistory(id: string) {
