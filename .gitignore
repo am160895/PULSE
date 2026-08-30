@@ -42,3 +42,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# supabase CLI's own local cache (created just by running `npx supabase`, unrelated to
+# this project's actual migrations)
+/supabase/.temp/
