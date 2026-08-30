@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { SupabaseQueryError } from "@/lib/supabase/unwrap";
 import { createUserWithProfile, getProfileByAuthUserId, getProfileByUsername, provisionGuestProfile } from "@/lib/data/social";
 import { listVerifiedOwnedVenueIds } from "@/lib/data/ownership";
+import { sendWelcomeEmail } from "@/lib/notifications/email";
 import type { Profile } from "@/types";
 
 export interface Session {
@@ -91,7 +92,7 @@ export async function signup(input: unknown): Promise<SignupResult> {
   if (await getProfileByUsername(username)) return { ok: false, error: "That username is taken" };
 
   // Created via the admin API (not auth.signUp) with email_confirm: true, matching this
-  // app's existing zero-email-verification UX — no email sending is configured. Immediately
+  // app's zero-email-verification UX — Supabase itself never emails this user. Immediately
   // followed by signInWithPassword below to actually establish the session cookies.
   const { data: created, error: createErr } = await supabaseAdmin().auth.admin.createUser({
     email,
@@ -117,6 +118,10 @@ export async function signup(input: unknown): Promise<SignupResult> {
   const supabase = await supabaseServer();
   const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
   if (signInErr) return { ok: false, error: "Account created — please log in" };
+
+  // Not awaited — a slow or failing welcome email must never delay/break signup itself;
+  // sendWelcomeEmail already swallows its own errors internally.
+  void sendWelcomeEmail(email, displayName);
 
   return { ok: true, userId: created.user.id };
 }
