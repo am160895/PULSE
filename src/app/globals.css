@@ -385,14 +385,18 @@ button {
 }
 
 /* DIRECTORY coverage — a real, known venue with no PULSE activity data at all. Deliberately
-   plain (a dot, not a number) so it can never be mistaken for a fabricated live score. */
+   plain (a dot, not a number) so it can never be mistaken for a fabricated live score —
+   but still a solid, clearly-visible fill: the previous near-background dark grey with a
+   faint border all but disappeared against the map's own dark tiles. A light ring around
+   a mid-grey dot reads clearly on any tile color underneath, dark or light. */
 .venue-marker.directory {
-  background: var(--surface);
+  background: #7b8494;
   color: var(--text-muted);
-  border: 1px solid var(--border-strong);
-  width: 14px;
-  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  width: 16px;
+  height: 16px;
   font-size: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .pulse-ring {
