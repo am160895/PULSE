@@ -547,7 +547,13 @@ async function fetchAllRows(
 /** Composes fetchAllRows' row-count-verified pagination with MAX_IDS_PER_IN_CLAUSE
  * chunking of the venueIds filter itself — needed because the two are independent axes
  * (a batch can have too many RESULT rows, too many INPUT ids, or both) and fetchAllRows
- * alone only guards the first. */
+ * alone only guards the first.
+ *
+ * Id-chunks are fetched in the same MAX_CONCURRENT_PAGES-capped parallel batches
+ * fetchAllRows already uses for pages, not one at a time — a map load spanning enough
+ * venues to need 2+ id-chunks was paying for each chunk's full round-trip in sequence
+ * (every batched signal query below did this independently), which multiplied straight
+ * into how long venue circles took to appear as the real venue count grew past ~200. */
 async function fetchAllRowsForVenues(
   venueIds: string[],
   page: (
@@ -557,10 +563,16 @@ async function fetchAllRowsForVenues(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) => PromiseLike<{ data: any; error: any; count?: number | null }>
 ): Promise<Row[]> {
-  const all: Row[] = [];
+  const idChunks: string[][] = [];
   for (let i = 0; i < venueIds.length; i += MAX_IDS_PER_IN_CLAUSE) {
-    const chunk = venueIds.slice(i, i + MAX_IDS_PER_IN_CLAUSE);
-    all.push(...(await fetchAllRows((from, to) => page(chunk, from, to))));
+    idChunks.push(venueIds.slice(i, i + MAX_IDS_PER_IN_CLAUSE));
+  }
+
+  const all: Row[] = [];
+  for (let i = 0; i < idChunks.length; i += MAX_CONCURRENT_PAGES) {
+    const batch = idChunks.slice(i, i + MAX_CONCURRENT_PAGES);
+    const results = await Promise.all(batch.map((chunk) => fetchAllRows((from, to) => page(chunk, from, to))));
+    for (const rows of results) all.push(...rows);
   }
   return all;
 }
@@ -758,18 +770,32 @@ export async function listSnapshotHistory(venueId: string, sinceMinutesAgo = 240
   return rows.map(rowToSnapshot);
 }
 
+/**
+ * `now` must be the caller's own fixed instant (computeVenueStatesBatch's `now`), not a
+ * fresh Date.now() taken here — this table is under constant write volume (every venue
+ * view appends a snapshot), and an open-ended `gte(cutoff)` with no upper bound let rows
+ * inserted *while this function's own multi-page fetch was still in flight* join the
+ * result set after the first page's `{count: exact}` had already been taken, so the final
+ * tally exceeded that count and tripped fetchAllRows' own silent-truncation guard — a real,
+ * live 500 on the map/explore endpoints once venue_signal_snapshots' write rate made
+ * pagination (rather than a single under-1000-row page) actually kick in. Pinning an upper
+ * bound at the batch's own `now` closes the query window before any of this can happen.
+ */
 export async function listSnapshotHistoryForVenues(
   venueIds: string[],
+  now: Date,
   sinceMinutesAgo = 240
 ): Promise<Map<string, VenueSignalSnapshot[]>> {
   if (venueIds.length === 0) return new Map();
-  const cutoff = new Date(Date.now() - sinceMinutesAgo * 60_000).toISOString();
+  const cutoff = new Date(now.getTime() - sinceMinutesAgo * 60_000).toISOString();
+  const upperBound = now.toISOString();
   const rows = await fetchAllRowsForVenues(venueIds, (chunk, from, to) =>
     supabaseAdmin()
       .from("venue_signal_snapshots")
       .select("*", { count: "exact" })
       .in("venue_id", chunk)
       .gte("captured_at", cutoff)
+      .lte("captured_at", upperBound)
       .range(from, to)
   );
   return groupBy(rows.map(rowToSnapshot), (s) => s.venueId);
@@ -872,13 +898,20 @@ export async function listRecentRollupsForVenues(venueIds: string[], now: Date =
 export async function getMissingRollupVenueIds(venueIds: string[], nightlifeDate: string): Promise<Set<string>> {
   if (venueIds.length === 0) return new Set();
 
+  const idChunks: string[][] = [];
+  for (let i = 0; i < venueIds.length; i += MAX_IDS_PER_IN_CLAUSE) idChunks.push(venueIds.slice(i, i + MAX_IDS_PER_IN_CLAUSE));
+
   const existing = new Set<string>();
-  for (let i = 0; i < venueIds.length; i += MAX_IDS_PER_IN_CLAUSE) {
-    const chunk = venueIds.slice(i, i + MAX_IDS_PER_IN_CLAUSE);
-    const rows: Row[] = unwrap(
-      await supabaseAdmin().from("venue_nightly_rollups").select("venue_id").in("venue_id", chunk).eq("nightlife_date", nightlifeDate)
+  for (let i = 0; i < idChunks.length; i += MAX_CONCURRENT_PAGES) {
+    const batch = idChunks.slice(i, i + MAX_CONCURRENT_PAGES);
+    const results = await Promise.all(
+      batch.map(async (chunk): Promise<Row[]> =>
+        unwrap(
+          await supabaseAdmin().from("venue_nightly_rollups").select("venue_id").in("venue_id", chunk).eq("nightlife_date", nightlifeDate)
+        )
+      )
     );
-    for (const r of rows) existing.add(r.venue_id);
+    for (const rows of results) for (const r of rows) existing.add(r.venue_id);
   }
   return new Set(venueIds.filter((id) => !existing.has(id)));
 }

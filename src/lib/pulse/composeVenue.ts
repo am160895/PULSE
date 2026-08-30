@@ -193,7 +193,7 @@ export async function computeVenueStatesBatch(venues: Venue[], now: Date, viewer
       listReportsForVenues(ids),
       listBaselinesForVenues(ids),
       listEventsForVenues(ids),
-      listSnapshotHistoryForVenues(ids),
+      listSnapshotHistoryForVenues(ids, now),
       countPresentAtVenues(ids, now),
       allTrustScoresMap(),
       listSpecialHoursForVenues(ids, now),
