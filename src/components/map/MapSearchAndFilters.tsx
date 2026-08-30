@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
 export type MapFilter =
+  | "OPEN_NOW"
   | "HOT"
   | "RISING"
   | "BEST_BET"
@@ -16,10 +17,12 @@ export type MapFilter =
   | "LIVE_MUSIC";
 
 // Primary layer stays on screen at all times (§11: reduce filter overload); everything
-// else lives behind "More" so the first screen isn't a wall of chips. There's no "Open
-// now" chip here — the map only ever shows open venues as circles, unconditionally (see
-// map/page.tsx), so it isn't something a user needs to toggle.
+// else lives behind "More" so the first screen isn't a wall of chips. The map shows every
+// known venue by default (open and closed both) — "Open now" is an optional narrowing
+// filter, not a forced default, so a quiet map at 3pm still reads as "here's everything,"
+// not "nothing to show."
 const PRIMARY_FILTERS: { key: MapFilter; label: string }[] = [
+  { key: "OPEN_NOW", label: "Open now" },
   { key: "HOT", label: "Hot now" },
   { key: "RISING", label: "Rising" },
   { key: "BEST_BET", label: "Best bet" },

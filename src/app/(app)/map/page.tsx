@@ -39,13 +39,10 @@ export default function MapPage() {
     if (searching) return base;
 
     const filtered = base.filter((v) => {
-      // Hard rule, not a togglable filter: map circles are open venues only — never
-      // venues with simply no hours on file, since absence of hours data isn't evidence
-      // of being closed. The one deliberate exception is "Later tonight," which exists
-      // specifically to surface closed-but-opening-later venues (spec §23).
-      if (isClosedState(v) && !activeFilters.has("LATER_TONIGHT")) return false;
-
       for (const f of activeFilters) {
+        // Excludes venues we're actually confident are closed — never venues with simply
+        // no hours on file, since absence of hours data isn't evidence of being closed.
+        if (f === "OPEN_NOW" && isClosedState(v)) return false;
         if (f === "HOT" && v.pulse.pulseLabel !== "HOT_NOW") return false;
         if (f === "RISING" && v.pulse.trend !== "RISING" && v.pulse.trend !== "RISING_FAST") return false;
         // Same predicate the Explore tab's Best Bet section uses (lib/pulse/explore.ts) —
@@ -75,19 +72,25 @@ export default function MapPage() {
 
   const selectedVenue = venues.find((v) => v.id === selectedId) ?? null;
 
-  // The "open venues only" rule legitimately returns zero results outside nightlife hours
-  // (e.g. mid-morning, when almost nothing is open) — a blank map with no explanation reads
-  // as broken, not as "correctly nothing's open right now." Not shown while searching (an
-  // empty search result is self-explanatory) or while actively browsing "Later tonight"
-  // (that view is expected to be sparse/empty sometimes, not a broken-map signal).
+  // Only relevant when "Open now" is actively selected — the map shows everything by
+  // default, so a quiet, mostly-closed hour reads as "here's everything" rather than a
+  // blank map. Once someone opts into Open now, though, a genuinely empty result (e.g.
+  // mid-morning) needs the same explanation as before, or it just looks broken.
   const dataLoaded = query.trim() ? searchVenues !== undefined : boundsVenues !== undefined;
-  const showNothingOpenState = dataLoaded && venues.length === 0 && !query.trim() && !activeFilters.has("LATER_TONIGHT");
+  const showNothingOpenState = dataLoaded && venues.length === 0 && !query.trim() && activeFilters.has("OPEN_NOW");
 
+  // OPEN_NOW and LATER_TONIGHT are opposite views (currently open vs currently closed) —
+  // active together they'd always show nothing, so selecting one clears the other.
   function toggleFilter(f: MapFilter) {
     setActiveFilters((prev) => {
       const next = new Set(prev);
-      if (next.has(f)) next.delete(f);
-      else next.add(f);
+      if (next.has(f)) {
+        next.delete(f);
+      } else {
+        if (f === "OPEN_NOW") next.delete("LATER_TONIGHT");
+        if (f === "LATER_TONIGHT") next.delete("OPEN_NOW");
+        next.add(f);
+      }
       return next;
     });
   }
