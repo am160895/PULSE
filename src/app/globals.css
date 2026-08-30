@@ -293,6 +293,7 @@ button {
 }
 
 .map-loading-mark {
+  position: relative;
   display: inline-flex;
   height: 56px;
   width: 56px;
@@ -301,6 +302,22 @@ button {
   border-radius: 999px;
   background: var(--hot);
   animation: map-loading-pulse 1.4s ease-in-out infinite;
+}
+
+/* Two rings, staggered half a cycle apart, expanding out from the mark and fading —
+   an actual radiating signal (matching the Radio glyph inside), not just the mark
+   itself breathing in place. */
+.map-loading-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid var(--hot);
+  animation: map-loading-radiate 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+.map-loading-ring.delayed {
+  animation-delay: 0.9s;
 }
 
 .map-loading-wordmark {
@@ -322,9 +339,23 @@ button {
   }
 }
 
+@keyframes map-loading-radiate {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .map-loading-mark {
     animation: none;
+  }
+  .map-loading-ring {
+    display: none;
   }
 }
 
@@ -332,15 +363,15 @@ button {
 
 .venue-marker {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   border-radius: 999px;
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border-strong);
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 750;
   font-variant-numeric: tabular-nums;
   box-shadow: var(--shadow-soft);
@@ -384,8 +415,8 @@ button {
   background: #7b8494;
   color: var(--text-muted);
   border: 2px solid rgba(255, 255, 255, 0.55);
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   font-size: 0;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }

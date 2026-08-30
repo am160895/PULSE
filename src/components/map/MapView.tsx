@@ -160,12 +160,12 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
             continue;
           }
 
-          const size = Math.min(56, 32 + Math.log2(props.point_count ?? 2) * 6);
+          const size = Math.min(46, 26 + Math.log2(props.point_count ?? 2) * 5);
           const el = document.createElement("div");
           el.className = "cluster-marker";
           el.style.width = `${size}px`;
           el.style.height = `${size}px`;
-          el.style.fontSize = "13px";
+          el.style.fontSize = "11.5px";
           el.textContent = String(props.point_count);
           el.addEventListener("click", () => {
             currentMap.easeTo({ center: [lng, lat], zoom: Math.min(17, zoom + 2.5) });
@@ -275,6 +275,8 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
       {(!isMapReady || !hasDataLoadedOnce) && (
         <div className="map-loading-overlay" aria-hidden="true">
           <span className="map-loading-mark">
+            <span className="map-loading-ring" />
+            <span className="map-loading-ring delayed" />
             <Radio size={26} color="white" />
           </span>
           <span className="map-loading-wordmark">PULSE</span>
