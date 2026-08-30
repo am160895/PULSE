@@ -37,9 +37,14 @@ describe("deriveVenueOpenState", () => {
 });
 
 describe("deriveCoverageState", () => {
-  it("is DIRECTORY when there's no baseline data at all, regardless of freshness", () => {
-    expect(deriveCoverageState(false, "LIVE")).toBe("DIRECTORY");
+  it("is LIVE/RECENT off a fresh report even with zero baseline history — a brand-new venue's first-ever report must never be masked as DIRECTORY just because it hasn't accumulated baselines yet", () => {
+    expect(deriveCoverageState(false, "LIVE")).toBe("LIVE");
+    expect(deriveCoverageState(false, "RECENT")).toBe("RECENT");
+  });
+
+  it("is DIRECTORY only when there's neither a live/recent report nor any baseline data", () => {
     expect(deriveCoverageState(false, "TYPICAL")).toBe("DIRECTORY");
+    expect(deriveCoverageState(false, "ESTIMATED")).toBe("DIRECTORY");
   });
 
   it("maps freshness to coverage state when baseline data exists", () => {

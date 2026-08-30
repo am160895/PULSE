@@ -45,10 +45,13 @@ export const TREND_THRESHOLDS = {
   falling: -4,
 } as const;
 
+// LIVE+RECENT together are what keep a venue out of "No live PULSE yet" regardless of
+// baseline history (see deriveCoverageState) — widened so a single report keeps reading
+// as a real, current signal for a full hour, not just the first 15 minutes.
 export const FRESHNESS_BANDS_MINUTES = {
-  live: 5,
-  recent: 15,
-  estimated: 45,
+  live: 20,
+  recent: 60,
+  estimated: 120,
 } as const;
 
 export const PULSE_LABEL_BANDS = [
