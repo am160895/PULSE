@@ -1,0 +1,2459 @@
+[
+{
+"name": "The Dead Rabbit",
+"address": "30 Water St, New York, NY 10004",
+"type": "Irish Pub / Cocktail",
+"neighborhood": "Financial District",
+"weeklyHours": "Fri-Sat 11:00 AM-3:00 AM; Sun-Thu 11:00 AM-2:00 AM"
+},
+{
+"name": "Swift Hibernian Lounge",
+"address": "34 E 4th St, New York, NY 10003",
+"type": "Irish Pub",
+"neighborhood": "NoHo / East Village",
+"weeklyHours": "Daily 11:30 AM-4:00 AM"
+},
+{
+"name": "Molly's Shebeen",
+"address": "287 3rd Ave, New York, NY 10010",
+"type": "Irish Pub",
+"neighborhood": "Gramercy",
+"weeklyHours": "Daily 11:00 AM-4:00 AM"
+},
+{
+"name": "The Landmark Tavern",
+"address": "626 11th Ave, New York, NY 10036",
+"type": "Irish Pub",
+"neighborhood": "Hell's Kitchen",
+"weeklyHours": "Daily 12:00 PM-12:00 AM"
+},
+{
+"name": "Wolfe Tone's Pub & Kitchen",
+"address": "37 E 29th St, New York, NY 10016",
+"type": "Irish Pub",
+"neighborhood": "NoMad",
+"weeklyHours": "Daily 11:00 AM-4:00 AM"
+},
+{
+"name": "Tara Mor",
+"address": "150 W 30th St, New York, NY 10001",
+"type": "Irish Pub",
+"neighborhood": "Chelsea / Penn",
+"weeklyHours": "Mon-Fri 12:00 PM-2:00 AM; Sat-Sun 11:00 AM-2:00 AM"
+},
+{
+"name": "Connolly's",
+"address": "14 E 47th St, New York, NY 10017",
+"type": "Irish Pub",
+"neighborhood": "Midtown East",
+"weeklyHours": "Mon-Sat 8:00 AM-2:00 AM; Sun 9:00 AM-2:00 AM"
+},
+{
+"name": "The Archer",
+"address": "176 Newark Ave, Jersey City, NJ 07302",
+"type": "Cocktail Bar",
+"neighborhood": "Downtown Jersey City",
+"weeklyHours": "Daily 5:00 PM-1:00 AM; Fri-Sat to 2:00 AM"
+},
+{
+"name": "Under The Boot",
+"address": "116 Newark Ave, Jersey City, NJ 07302",
+"type": "Lounge / Club",
+"neighborhood": "Downtown Jersey City",
+"weeklyHours": "Fri-Sat 7:00 PM-3:00 AM"
+},
+{
+"name": "dullboy",
+"address": "364 Grove St Unit 2, Jersey City, NJ 07302",
+"type": "Cocktail Bar",
+"neighborhood": "Downtown Jersey City",
+"weeklyHours": "Tue-Wed 4:00 PM-10:00 PM; Thu-Fri 11:30 AM-12:00 AM; Sat 11:30 AM-12:00 AM; Sun 11:30 AM-10:00 PM"
+},
+{
+"name": "The Ashford",
+"address": "145 Newark Ave, Jersey City, NJ 07302",
+"type": "Bar / Lounge",
+"neighborhood": "Downtown Jersey City",
+"weeklyHours": "Mon 1:00 PM-2:00 AM; Tue-Thu 4:00 PM-2:00 AM; Fri 4:00 PM-3:00 AM; Sat 11:30 AM-3:00 AM; Sun 11:30 AM-2:00 AM"
+},
+{
+"name": "Cellar 335",
+"address": "335 Newark Ave, Jersey City, NJ 07302",
+"type": "Tiki / Cocktail Bar",
+"neighborhood": "Jersey City",
+"weeklyHours": "Tue-Wed 5:00 PM-10:00 PM; Thu 5:00 PM-10:00 PM; Fri-Sat 5:00 PM-11:00 PM"
+},
+{
+"name": "Zeppelin Hall Beer Garden",
+"address": "88 Liberty View Dr, Jersey City, NJ 07302",
+"type": "Beer Garden",
+"neighborhood": "Jersey City",
+"weeklyHours": "Mon-Wed 4:00 PM-1:30 AM; Thu 4:00 PM-1:45 AM; Fri 4:00 PM-2:45 AM; Sat 12:00 PM-2:45 AM; Sun 12:00 PM-1:30 AM"
+},
+{
+"name": "San Patricios",
+"address": "8 Erie St A, Jersey City, NJ 07302",
+"type": "Irish Pub / Cantina",
+"neighborhood": "Downtown Jersey City",
+"weeklyHours": "Mon-Tue 4:00 PM-12:00 AM; Wed 4:00 PM-1:00 AM; Thu 4:00 PM-1:00 AM; Fri 4:00 PM-2:00 AM; Sat 11:00 AM-2:00 AM; Sun 11:00 AM-12:00 AM"
+},
+{
+"name": "Low Fidelity",
+"address": "328 Palisade Ave, Jersey City, NJ 07307",
+"type": "Cocktail Bar",
+"neighborhood": "Jersey City Heights",
+"weeklyHours": "Mon-Thu 5:00 PM-2:00 AM; Fri 5:00 PM-3:00 AM; Sat 12:00 PM-3:00 AM; Sun 12:00 PM-2:00 AM"
+},
+{
+"name": "QXT's Night Club",
+"address": "248 Mulberry St, Newark, NJ 07102",
+"type": "Nightclub",
+"neighborhood": "Newark",
+"weeklyHours": "Wed 8:00 PM-1:00 AM; Thu 8:00 PM-1:00 AM; Fri-Sat 10:00 PM-3:00 AM; Sun 6:00 PM-12:00 AM"
+},
+{
+"name": "BarCode Entertainment Complex",
+"address": "429 N Broad St, Elizabeth, NJ 07208",
+"type": "Nightclub",
+"neighborhood": "Elizabeth",
+"weeklyHours": "Thu-Sat 9:00 PM-3:00 AM; Sun 12:00 PM-2:00 AM"
+},
+{
+"name": "Tally Ho",
+"address": "215 Washington St, Hoboken, NJ 07030",
+"type": "Bar / Nightlife",
+"neighborhood": "Hoboken",
+"weeklyHours": "Thu 4:00 PM-2:00 AM; Fri 4:00 PM-3:00 AM; Sat 2:00 PM-3:00 AM; Sun 12:00 PM-Late; Mon-Wed Closed"
+},
+{
+"name": "1020 Bar",
+"address": "1020 Amsterdam Ave, New York, NY 10025",
+"type": "Bar",
+"neighborhood": "Morningside Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "11th Street Bar",
+"address": "510 E 11th St, New York, NY 10009",
+"type": "Bar",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "12th Street Ale House",
+"address": "192 2nd Ave, New York, NY 10003",
+"type": "Bar",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "169 Bar",
+"address": "169 E Broadway, New York, NY 10002",
+"type": "Dive Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "124 Rabbit Club",
+"address": "124 MacDougal St, New York, NY 10012",
+"type": "Bar",
+"neighborhood": "Greenwich Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Superbueno",
+"address": "13 1st Ave, New York, NY 10003",
+"type": "Cocktail Bar",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Death & Co",
+"address": "433 E 6th St, New York, NY 10009",
+"type": "Cocktail Bar",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Amor y Amargo",
+"address": "443 E 6th St, New York, NY 10009",
+"type": "Cocktail Bar",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Back Room",
+"address": "102 Norfolk St, New York, NY 10002",
+"type": "Speakeasy",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Mr. Purple",
+"address": "180 Orchard St, New York, NY 10002",
+"type": "Rooftop Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Delancey",
+"address": "168 Delancey St, New York, NY 10002",
+"type": "Bar / Club",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Little Branch",
+"address": "20 7th Ave S, New York, NY 10014",
+"type": "Cocktail Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bathtub Gin",
+"address": "132 9th Ave, New York, NY 10011",
+"type": "Speakeasy",
+"neighborhood": "Chelsea",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Employees Only",
+"address": "510 Hudson St, New York, NY 10014",
+"type": "Cocktail Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Katana Kitten",
+"address": "531 Hudson St, New York, NY 10014",
+"type": "Cocktail Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dante",
+"address": "79-81 MacDougal St, New York, NY 10012",
+"type": "Cocktail Bar",
+"neighborhood": "Greenwich Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dante West Village",
+"address": "551 Hudson St, New York, NY 10014",
+"type": "Cocktail Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Up & Up",
+"address": "116 MacDougal St, New York, NY 10012",
+"type": "Cocktail Bar",
+"neighborhood": "Greenwich Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Blind Tiger Ale House",
+"address": "281 Bleecker St, New York, NY 10014",
+"type": "Beer Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "White Horse Tavern",
+"address": "567 Hudson St, New York, NY 10014",
+"type": "Tavern",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Corner Bistro",
+"address": "331 W 4th St, New York, NY 10014",
+"type": "Dive Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Johnny's Bar",
+"address": "90 Greenwich Ave, New York, NY 10011",
+"type": "Dive Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Stonewall Inn",
+"address": "53 Christopher St, New York, NY 10014",
+"type": "Bar / Club",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Pieces",
+"address": "8 Christopher St, New York, NY 10014",
+"type": "Bar / Club",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Cubbyhole",
+"address": "281 W 12th St, New York, NY 10014",
+"type": "Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Duplex",
+"address": "61 Christopher St, New York, NY 10014",
+"type": "Piano Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Marie’s Crisis Cafe",
+"address": "59 Grove St, New York, NY 10014",
+"type": "Piano Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bar Pisellino",
+"address": "52 Grove St, New York, NY 10014",
+"type": "Cocktail Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Analogue",
+"address": "19 W 8th St, New York, NY 10011",
+"type": "Cocktail Bar",
+"neighborhood": "Greenwich Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Spaniard",
+"address": "190 W 4th St, New York, NY 10014",
+"type": "Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Wilfie & Nell",
+"address": "228 W 4th St, New York, NY 10014",
+"type": "Bar",
+"neighborhood": "West Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bar Moga",
+"address": "128 W Houston St, New York, NY 10012",
+"type": "Cocktail Bar",
+"neighborhood": "Greenwich Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Temple Bar",
+"address": "332 Lafayette St, New York, NY 10012",
+"type": "Cocktail Bar",
+"neighborhood": "NoHo",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Phebe's Tavern",
+"address": "361 Bowery, New York, NY 10003",
+"type": "Bar",
+"neighborhood": "Bowery",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bowery Electric",
+"address": "327 Bowery, New York, NY 10003",
+"type": "Live Music Bar",
+"neighborhood": "Bowery",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Joyface",
+"address": "104 Avenue C, New York, NY 10009",
+"type": "Bar / Club",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Sophie’s",
+"address": "507 E 5th St, New York, NY 10009",
+"type": "Dive Bar",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Doc Holliday's",
+"address": "141 Avenue A, New York, NY 10009",
+"type": "Dive Bar",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Blue & Gold Tavern",
+"address": "79 E 7th St, New York, NY 10003",
+"type": "Dive Bar",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Holiday Cocktail Lounge",
+"address": "75 St Marks Pl, New York, NY 10003",
+"type": "Cocktail Bar",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Please Don't Tell",
+"address": "113 St Marks Pl, New York, NY 10009",
+"type": "Speakeasy",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "McSorley's Old Ale House",
+"address": "15 E 7th St, New York, NY 10003",
+"type": "Irish Pub",
+"neighborhood": "East Village",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Paddy Maguire's Ale House",
+"address": "237 3rd Ave, New York, NY 10003",
+"type": "Irish Pub",
+"neighborhood": "Gramercy",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Paddy Reilly's Music Bar",
+"address": "519 2nd Ave, New York, NY 10016",
+"type": "Irish Pub",
+"neighborhood": "Kips Bay",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Peter McManus Cafe",
+"address": "152 7th Ave, New York, NY 10011",
+"type": "Irish Pub",
+"neighborhood": "Chelsea",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Maggie Reilly's",
+"address": "340 9th Ave, New York, NY 10001",
+"type": "Irish Pub",
+"neighborhood": "Chelsea",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Tir na Nog",
+"address": "254 W 31st St, New York, NY 10001",
+"type": "Irish Pub",
+"neighborhood": "Penn Station",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Mean Fiddler",
+"address": "266 W 47th St, New York, NY 10036",
+"type": "Irish Pub",
+"neighborhood": "Times Square",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Playwright Celtic Pub",
+"address": "732 8th Ave, New York, NY 10036",
+"type": "Irish Pub",
+"neighborhood": "Times Square",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Gabby O'Hara's",
+"address": "123 W 39th St, New York, NY 10018",
+"type": "Irish Pub",
+"neighborhood": "Midtown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Hibernia Bar",
+"address": "401 W 50th St, New York, NY 10019",
+"type": "Irish Pub",
+"neighborhood": "Hell's Kitchen",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "McGee's Pub",
+"address": "240 W 55th St, New York, NY 10019",
+"type": "Irish Pub",
+"neighborhood": "Midtown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Ryan's Daughter",
+"address": "350 E 85th St, New York, NY 10028",
+"type": "Irish Pub",
+"neighborhood": "Upper East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "O'Hara's Restaurant & Pub",
+"address": "120 Cedar St, New York, NY 10006",
+"type": "Irish Pub",
+"neighborhood": "Financial District",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Penrose",
+"address": "1590 2nd Ave, New York, NY 10028",
+"type": "Bar",
+"neighborhood": "Upper East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Ethyl's",
+"address": "1629 2nd Ave, New York, NY 10028",
+"type": "Bar / Dance",
+"neighborhood": "Upper East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Iggy's",
+"address": "1452 2nd Ave, New York, NY 10021",
+"type": "Bar",
+"neighborhood": "Upper East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bondurants",
+"address": "303 E 85th St, New York, NY 10028",
+"type": "Bar",
+"neighborhood": "Upper East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bemelmans Bar",
+"address": "35 E 76th St, New York, NY 10021",
+"type": "Hotel Bar",
+"neighborhood": "Upper East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Jeffrey Craft Beer & Bites",
+"address": "311 E 60th St, New York, NY 10022",
+"type": "Beer Bar",
+"neighborhood": "Upper East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Stumble Inn",
+"address": "1454 2nd Ave, New York, NY 10021",
+"type": "Sports Bar",
+"neighborhood": "Upper East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Supply House",
+"address": "1647 2nd Ave, New York, NY 10028",
+"type": "Sports Bar",
+"neighborhood": "Upper East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dorrian's Red Hand",
+"address": "1616 2nd Ave, New York, NY 10028",
+"type": "Irish Pub",
+"neighborhood": "Upper East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Caledonia Bar",
+"address": "1609 2nd Ave, New York, NY 10028",
+"type": "Whisky Bar",
+"neighborhood": "Upper East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Prohibition",
+"address": "503 Columbus Ave, New York, NY 10024",
+"type": "Live Music Bar",
+"neighborhood": "Upper West Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Owl's Tail",
+"address": "215 W 75th St, New York, NY 10023",
+"type": "Cocktail Bar",
+"neighborhood": "Upper West Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dive Bar",
+"address": "732 Amsterdam Ave, New York, NY 10025",
+"type": "Dive Bar",
+"neighborhood": "Upper West Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "e's BAR",
+"address": "511 Amsterdam Ave, New York, NY 10024",
+"type": "Bar",
+"neighborhood": "Upper West Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Gin Mill",
+"address": "442 Amsterdam Ave, New York, NY 10024",
+"type": "Sports Bar",
+"neighborhood": "Upper West Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "George Keeley",
+"address": "485 Amsterdam Ave, New York, NY 10024",
+"type": "Beer Bar",
+"neighborhood": "Upper West Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Dead Poet",
+"address": "450 Amsterdam Ave, New York, NY 10024",
+"type": "Irish Pub",
+"neighborhood": "Upper West Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dive 75",
+"address": "101 W 75th St, New York, NY 10023",
+"type": "Dive Bar",
+"neighborhood": "Upper West Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Nobody Told Me",
+"address": "951 Amsterdam Ave, New York, NY 10025",
+"type": "Cocktail Bar",
+"neighborhood": "Morningside Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Harlem Public",
+"address": "3612 Broadway, New York, NY 10031",
+"type": "Bar",
+"neighborhood": "Hamilton Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "At The Wallace",
+"address": "3612 Broadway, New York, NY 10031",
+"type": "Bar",
+"neighborhood": "Hamilton Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Honey Well",
+"address": "3604 Broadway, New York, NY 10031",
+"type": "Cocktail Bar",
+"neighborhood": "Hamilton Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Harlem Hops",
+"address": "2268 Adam Clayton Powell Jr Blvd, New York, NY 10030",
+"type": "Beer Bar",
+"neighborhood": "Harlem",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "67 Orange Street",
+"address": "2082 Frederick Douglass Blvd, New York, NY 10026",
+"type": "Cocktail Bar",
+"neighborhood": "Harlem",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Honey Well",
+"address": "3604 Broadway, New York, NY 10031",
+"type": "Cocktail Bar",
+"neighborhood": "Hamilton Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Refinery Rooftop",
+"address": "63 W 38th St, New York, NY 10018",
+"type": "Rooftop Bar",
+"neighborhood": "Midtown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Ophelia Lounge",
+"address": "3 Mitchell Pl, New York, NY 10017",
+"type": "Rooftop Bar",
+"neighborhood": "Midtown East",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Tanner Smith's",
+"address": "204 W 55th St, New York, NY 10019",
+"type": "Bar",
+"neighborhood": "Midtown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dutch Fred's",
+"address": "307 W 47th St, New York, NY 10036",
+"type": "Cocktail Bar",
+"neighborhood": "Hell's Kitchen",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Valerie",
+"address": "45 W 45th St, New York, NY 10036",
+"type": "Cocktail Bar",
+"neighborhood": "Midtown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Rum House",
+"address": "228 W 47th St, New York, NY 10036",
+"type": "Cocktail Bar",
+"neighborhood": "Times Square",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Jimmy's Corner",
+"address": "140 W 44th St, New York, NY 10036",
+"type": "Dive Bar",
+"neighborhood": "Times Square",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bar Centrale",
+"address": "324 W 46th St, New York, NY 10036",
+"type": "Cocktail Bar",
+"neighborhood": "Hell's Kitchen",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Rudy's Bar & Grill",
+"address": "627 9th Ave, New York, NY 10036",
+"type": "Dive Bar",
+"neighborhood": "Hell's Kitchen",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Pocket Bar NYC",
+"address": "455 W 48th St, New York, NY 10036",
+"type": "Wine Bar",
+"neighborhood": "Hell's Kitchen",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Barcelona Bar",
+"address": "923 8th Ave, New York, NY 10019",
+"type": "Bar",
+"neighborhood": "Midtown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Pebble Bar",
+"address": "67 W 49th St, New York, NY 10112",
+"type": "Cocktail Bar",
+"neighborhood": "Rockefeller Center",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dear Irving on Hudson",
+"address": "310 W 40th St, New York, NY 10018",
+"type": "Rooftop Bar",
+"neighborhood": "Midtown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Campbell",
+"address": "15 Vanderbilt Ave, New York, NY 10017",
+"type": "Cocktail Bar",
+"neighborhood": "Grand Central",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Madame George",
+"address": "45 W 45th St, New York, NY 10036",
+"type": "Cocktail Bar",
+"neighborhood": "Midtown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Oscar Wilde",
+"address": "45 W 27th St, New York, NY 10001",
+"type": "Bar",
+"neighborhood": "NoMad",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Patent Pending",
+"address": "49 W 27th St, New York, NY 10001",
+"type": "Speakeasy",
+"neighborhood": "NoMad",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Flatiron Room NoMad",
+"address": "37 W 26th St, New York, NY 10010",
+"type": "Whiskey Bar",
+"neighborhood": "NoMad",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Apotheke NoMad",
+"address": "9 W 26th St, New York, NY 10010",
+"type": "Cocktail Bar",
+"neighborhood": "NoMad",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "230 Fifth Rooftop",
+"address": "1150 Broadway, New York, NY 10001",
+"type": "Rooftop Bar",
+"neighborhood": "NoMad",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Magic Hour Rooftop",
+"address": "485 7th Ave, New York, NY 10018",
+"type": "Rooftop Bar",
+"neighborhood": "Midtown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Somewhere Nowhere",
+"address": "112 W 25th St, New York, NY 10001",
+"type": "Rooftop / Club",
+"neighborhood": "Chelsea",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Fleur Room",
+"address": "848 Washington St, New York, NY 10014",
+"type": "Rooftop / Lounge",
+"neighborhood": "Chelsea",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Porchlight",
+"address": "271 11th Ave, New York, NY 10001",
+"type": "Cocktail Bar",
+"neighborhood": "Chelsea",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Jungle Bird",
+"address": "174 8th Ave, New York, NY 10011",
+"type": "Cocktail Bar",
+"neighborhood": "Chelsea",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Gallow Green",
+"address": "542 W 27th St, New York, NY 10001",
+"type": "Rooftop Bar",
+"neighborhood": "Chelsea",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Tippler",
+"address": "425 W 15th St, New York, NY 10011",
+"type": "Cocktail Bar",
+"neighborhood": "Chelsea",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Brass Monkey",
+"address": "55 Little W 12th St, New York, NY 10014",
+"type": "Bar",
+"neighborhood": "Meatpacking",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Standard Biergarten",
+"address": "848 Washington St, New York, NY 10014",
+"type": "Beer Garden",
+"neighborhood": "Meatpacking",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Le Bain",
+"address": "848 Washington St, New York, NY 10014",
+"type": "Nightclub",
+"neighborhood": "Meatpacking",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Highlight Room",
+"address": "145 Bowery, New York, NY 10002",
+"type": "Rooftop / Club",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Pianos",
+"address": "158 Ludlow St, New York, NY 10002",
+"type": "Live Music / Club",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Arlene's Grocery",
+"address": "95 Stanton St, New York, NY 10002",
+"type": "Live Music Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Clockwork Bar",
+"address": "21 Essex St, New York, NY 10002",
+"type": "Dive Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Welcome to the Johnsons",
+"address": "123 Rivington St, New York, NY 10002",
+"type": "Dive Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Home Sweet Home",
+"address": "131 Chrystie St, New York, NY 10002",
+"type": "Bar / Club",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Flower Shop",
+"address": "107 Eldridge St, New York, NY 10002",
+"type": "Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Attaboy",
+"address": "134 Eldridge St, New York, NY 10002",
+"type": "Cocktail Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bar Goto",
+"address": "245 Eldridge St, New York, NY 10002",
+"type": "Cocktail Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Double Chicken Please",
+"address": "115 Allen St, New York, NY 10002",
+"type": "Cocktail Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Reception Bar",
+"address": "45 Orchard St, New York, NY 10002",
+"type": "Cocktail Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Crown",
+"address": "50 Bowery, New York, NY 10013",
+"type": "Rooftop Bar",
+"neighborhood": "Chinatown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Apotheke Chinatown",
+"address": "9 Doyers St, New York, NY 10013",
+"type": "Cocktail Bar",
+"neighborhood": "Chinatown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Whiskey Tavern",
+"address": "79 Baxter St, New York, NY 10013",
+"type": "Bar",
+"neighborhood": "Chinatown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bar Belly",
+"address": "14 Orchard St, New York, NY 10002",
+"type": "Cocktail Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bar Goyana",
+"address": "VERIFY ADDRESS",
+"type": "Cocktail Bar",
+"neighborhood": "Lower East Side",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Swan Room",
+"address": "54 Canal St, New York, NY 10002",
+"type": "Cocktail Bar",
+"neighborhood": "Chinatown",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Django",
+"address": "2 Avenue of the Americas, New York, NY 10013",
+"type": "Jazz Bar",
+"neighborhood": "Tribeca",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Nancy Whiskey Pub",
+"address": "1 Lispenard St, New York, NY 10013",
+"type": "Dive Bar",
+"neighborhood": "Tribeca",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Smith & Mills",
+"address": "71 N Moore St, New York, NY 10013",
+"type": "Cocktail Bar",
+"neighborhood": "Tribeca",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Weather Up",
+"address": "159 Duane St, New York, NY 10013",
+"type": "Cocktail Bar",
+"neighborhood": "Tribeca",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Tiny's & The Bar Upstairs",
+"address": "135 W Broadway, New York, NY 10013",
+"type": "Bar",
+"neighborhood": "Tribeca",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Odeon",
+"address": "145 W Broadway, New York, NY 10013",
+"type": "Bar",
+"neighborhood": "Tribeca",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "WarrenPeace",
+"address": "77 Warren St, New York, NY 10007",
+"type": "Cocktail Bar",
+"neighborhood": "Tribeca",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "SoHo Cigar Bar",
+"address": "32 Watts St, New York, NY 10013",
+"type": "Cigar Bar",
+"neighborhood": "SoHo",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Ear Inn",
+"address": "326 Spring St, New York, NY 10013",
+"type": "Historic Bar",
+"neighborhood": "SoHo",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Jimmy at ModernHaus",
+"address": "15 Thompson St, New York, NY 10013",
+"type": "Rooftop Bar",
+"neighborhood": "SoHo",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Roxy Bar",
+"address": "2 Avenue of the Americas, New York, NY 10013",
+"type": "Hotel Bar",
+"neighborhood": "Tribeca",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Oculus Beer Garden",
+"address": "33 Vesey St, New York, NY 10007",
+"type": "Beer Garden",
+"neighborhood": "Financial District",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Fraunces Tavern",
+"address": "54 Pearl St, New York, NY 10004",
+"type": "Historic Tavern",
+"neighborhood": "Financial District",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Jeremy's Ale House",
+"address": "228 Front St, New York, NY 10038",
+"type": "Dive Bar",
+"neighborhood": "Seaport",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Paris Cafe",
+"address": "119 South St, New York, NY 10038",
+"type": "Bar",
+"neighborhood": "Seaport",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Overstory",
+"address": "70 Pine St, New York, NY 10005",
+"type": "Cocktail Bar",
+"neighborhood": "Financial District",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Manhatta",
+"address": "28 Liberty St, New York, NY 10005",
+"type": "Cocktail Bar",
+"neighborhood": "Financial District",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Cedar Local",
+"address": "25 Cedar St, New York, NY 10005",
+"type": "Cocktail Bar",
+"neighborhood": "Financial District",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Clinton Hall FiDi",
+"address": "90 Washington St, New York, NY 10006",
+"type": "Beer Hall",
+"neighborhood": "Financial District",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Beekman Beer Garden",
+"address": "89 South St, New York, NY 10038",
+"type": "Beer Garden",
+"neighborhood": "Seaport",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Westlight",
+"address": "111 N 12th St, Brooklyn, NY 11249",
+"type": "Rooftop Bar",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Woods",
+"address": "48 S 4th St, Brooklyn, NY 11249",
+"type": "Bar / Club",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Union Pool",
+"address": "484 Union Ave, Brooklyn, NY 11211",
+"type": "Bar / Live Music",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Lucky Dog",
+"address": "303 Bedford Ave, Brooklyn, NY 11211",
+"type": "Dive Bar",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Skinny Dennis",
+"address": "152 Metropolitan Ave, Brooklyn, NY 11211",
+"type": "Honky Tonk Bar",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Rocka Rolla",
+"address": "486 Metropolitan Ave, Brooklyn, NY 11211",
+"type": "Dive Bar",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Horses and Divorces",
+"address": "359 Bedford Ave, Brooklyn, NY 11211",
+"type": "Dive Bar",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Midnights",
+"address": "149 N 6th St, Brooklyn, NY 11249",
+"type": "Bar",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Fresh Kills Bar",
+"address": "161 Grand St, Brooklyn, NY 11211",
+"type": "Cocktail Bar",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Maison Premiere",
+"address": "298 Bedford Ave, Brooklyn, NY 11249",
+"type": "Cocktail Bar",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Night of Joy",
+"address": "667 Lorimer St, Brooklyn, NY 11211",
+"type": "Cocktail Bar",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Pete's Candy Store",
+"address": "709 Lorimer St, Brooklyn, NY 11211",
+"type": "Live Music Bar",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "George & Jack's Tap Room",
+"address": "103 Berry St, Brooklyn, NY 11249",
+"type": "Dive Bar",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Radegast Hall & Biergarten",
+"address": "113 N 3rd St, Brooklyn, NY 11249",
+"type": "Beer Hall",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Berry Park",
+"address": "4 Berry St, Brooklyn, NY 11211",
+"type": "Rooftop Bar",
+"neighborhood": "Greenpoint",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "TØRST",
+"address": "615 Manhattan Ave, Brooklyn, NY 11222",
+"type": "Beer Bar",
+"neighborhood": "Greenpoint",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Goldie's",
+"address": "195 Nassau Ave, Brooklyn, NY 11222",
+"type": "Bar",
+"neighborhood": "Greenpoint",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Diamond Lil",
+"address": "179 Nassau Ave, Brooklyn, NY 11222",
+"type": "Cocktail Bar",
+"neighborhood": "Greenpoint",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Moonlight Mile",
+"address": "200 Franklin St, Brooklyn, NY 11222",
+"type": "Whiskey Bar",
+"neighborhood": "Greenpoint",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Temkin's",
+"address": "155 Greenpoint Ave, Brooklyn, NY 11222",
+"type": "Bar",
+"neighborhood": "Greenpoint",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Oak & Iron",
+"address": "147 Franklin St, Brooklyn, NY 11222",
+"type": "Cocktail Bar",
+"neighborhood": "Greenpoint",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Black Rabbit",
+"address": "91 Greenpoint Ave, Brooklyn, NY 11222",
+"type": "Bar",
+"neighborhood": "Greenpoint",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Little Rascal Bar",
+"address": "130 Franklin St, Brooklyn, NY 11222",
+"type": "Bar",
+"neighborhood": "Greenpoint",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Good Room",
+"address": "98 Meserole Ave, Brooklyn, NY 11222",
+"type": "Nightclub",
+"neighborhood": "Greenpoint",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "House of Yes",
+"address": "2 Wyckoff Ave, Brooklyn, NY 11237",
+"type": "Nightclub",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Elsewhere",
+"address": "599 Johnson Ave, Brooklyn, NY 11237",
+"type": "Nightclub / Music",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Nowadays",
+"address": "56-06 Cooper Ave, Ridgewood, NY 11385",
+"type": "Nightclub / Outdoor",
+"neighborhood": "Ridgewood",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Jupiter Disco",
+"address": "1237 Flushing Ave, Brooklyn, NY 11237",
+"type": "Bar / Club",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Mood Ring",
+"address": "1260 Myrtle Ave, Brooklyn, NY 11221",
+"type": "Bar / Club",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Three Diamond Door",
+"address": "211 Knickerbocker Ave, Brooklyn, NY 11237",
+"type": "Bar",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Johnson's",
+"address": "369 Troutman St, Brooklyn, NY 11237",
+"type": "Dive Bar",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Cobra Club",
+"address": "6 Wyckoff Ave, Brooklyn, NY 11237",
+"type": "Bar / Music",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Birdy's",
+"address": "1215 Myrtle Ave, Brooklyn, NY 11221",
+"type": "Dive Bar",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Honore Club",
+"address": "173 Irving Ave, Brooklyn, NY 11237",
+"type": "Bar",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Syndicated",
+"address": "40 Bogart St, Brooklyn, NY 11206",
+"type": "Bar / Cinema",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Brooklyn Beer Garden",
+"address": "33 Wyckoff Ave, Brooklyn, NY 11237",
+"type": "Beer Garden",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Keep",
+"address": "205 Cypress Ave, Ridgewood, NY 11385",
+"type": "Bar",
+"neighborhood": "Ridgewood",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "TV Eye",
+"address": "1647 Weirfield St, Ridgewood, NY 11385",
+"type": "Live Music / Club",
+"neighborhood": "Ridgewood",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Trans-Pecos",
+"address": "9-15 Wyckoff Ave, Ridgewood, NY 11385",
+"type": "Live Music",
+"neighborhood": "Ridgewood",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Gottscheer Hall",
+"address": "657 Fairview Ave, Ridgewood, NY 11385",
+"type": "Beer Hall",
+"neighborhood": "Ridgewood",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Seneca",
+"address": "582 Seneca Ave, Ridgewood, NY 11385",
+"type": "Bar",
+"neighborhood": "Ridgewood",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Father Knows Best",
+"address": "611A Wilson Ave, Brooklyn, NY 11207",
+"type": "Bar",
+"neighborhood": "Bushwick",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bar LunÀtico",
+"address": "486 Halsey St, Brooklyn, NY 11233",
+"type": "Live Music Bar",
+"neighborhood": "Bed-Stuy",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Do or Dive Bar",
+"address": "1108 Bedford Ave, Brooklyn, NY 11216",
+"type": "Dive Bar",
+"neighborhood": "Bed-Stuy",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dynaco",
+"address": "1112 Bedford Ave, Brooklyn, NY 11216",
+"type": "Cocktail Bar",
+"neighborhood": "Bed-Stuy",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "C'mon Everybody",
+"address": "325 Franklin Ave, Brooklyn, NY 11238",
+"type": "Bar / Club",
+"neighborhood": "Bed-Stuy",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Friends and Lovers",
+"address": "641 Classon Ave, Brooklyn, NY 11238",
+"type": "Bar / Club",
+"neighborhood": "Crown Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Franklin Park",
+"address": "618 St Johns Pl, Brooklyn, NY 11238",
+"type": "Bar",
+"neighborhood": "Crown Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "King Tai",
+"address": "1095 Bergen St, Brooklyn, NY 11216",
+"type": "Cocktail Bar",
+"neighborhood": "Crown Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Covenhoven",
+"address": "730 Classon Ave, Brooklyn, NY 11238",
+"type": "Beer Bar",
+"neighborhood": "Crown Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Finn's Corner",
+"address": "660 Washington Ave, Brooklyn, NY 11238",
+"type": "Dive Bar",
+"neighborhood": "Prospect Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Sharlene's",
+"address": "353 Flatbush Ave, Brooklyn, NY 11238",
+"type": "Dive Bar",
+"neighborhood": "Prospect Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Bearded Lady",
+"address": "686A Washington Ave, Brooklyn, NY 11238",
+"type": "Cocktail Bar",
+"neighborhood": "Prospect Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Weather Up Brooklyn",
+"address": "589 Vanderbilt Ave, Brooklyn, NY 11238",
+"type": "Cocktail Bar",
+"neighborhood": "Prospect Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Vanderbilt",
+"address": "570 Vanderbilt Ave, Brooklyn, NY 11238",
+"type": "Bar",
+"neighborhood": "Prospect Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Union Hall",
+"address": "702 Union St, Brooklyn, NY 11215",
+"type": "Bar / Music",
+"neighborhood": "Park Slope",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "High Dive",
+"address": "243 5th Ave, Brooklyn, NY 11215",
+"type": "Dive Bar",
+"neighborhood": "Park Slope",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Gate",
+"address": "321 5th Ave, Brooklyn, NY 11215",
+"type": "Bar",
+"neighborhood": "Park Slope",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Commonwealth",
+"address": "497 5th Ave, Brooklyn, NY 11215",
+"type": "Bar",
+"neighborhood": "Park Slope",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Freddy's Bar",
+"address": "627 5th Ave, Brooklyn, NY 11215",
+"type": "Dive Bar",
+"neighborhood": "South Slope",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Sea Witch",
+"address": "703 5th Ave, Brooklyn, NY 11215",
+"type": "Bar",
+"neighborhood": "South Slope",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Monro Pub",
+"address": "481 5th Ave, Brooklyn, NY 11215",
+"type": "Pub",
+"neighborhood": "Park Slope",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "McMahon's Public House",
+"address": "39 5th Ave, Brooklyn, NY 11217",
+"type": "Irish Pub",
+"neighborhood": "Park Slope",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Clonard",
+"address": "506 Grand St, Brooklyn, NY 11211",
+"type": "Irish Pub",
+"neighborhood": "Williamsburg",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Brooklyn Inn",
+"address": "148 Hoyt St, Brooklyn, NY 11217",
+"type": "Historic Bar",
+"neighborhood": "Boerum Hill",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Hollow Nickel",
+"address": "494 Atlantic Ave, Brooklyn, NY 11217",
+"type": "Bar",
+"neighborhood": "Boerum Hill",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Brazen Head",
+"address": "228 Atlantic Ave, Brooklyn, NY 11201",
+"type": "Bar",
+"neighborhood": "Boerum Hill",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Long Island Bar",
+"address": "110 Atlantic Ave, Brooklyn, NY 11201",
+"type": "Cocktail Bar",
+"neighborhood": "Cobble Hill",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Boat Bar",
+"address": "175 Smith St, Brooklyn, NY 11201",
+"type": "Dive Bar",
+"neighborhood": "Cobble Hill",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bar Great Harry",
+"address": "280 Smith St, Brooklyn, NY 11231",
+"type": "Beer Bar",
+"neighborhood": "Carroll Gardens",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Zombie Hut",
+"address": "273 Smith St, Brooklyn, NY 11231",
+"type": "Tiki Bar",
+"neighborhood": "Carroll Gardens",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Brooklyn Social",
+"address": "335 Smith St, Brooklyn, NY 11231",
+"type": "Cocktail Bar",
+"neighborhood": "Carroll Gardens",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Sunny's Bar",
+"address": "253 Conover St, Brooklyn, NY 11231",
+"type": "Historic Bar",
+"neighborhood": "Red Hook",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Brooklyn Ice House",
+"address": "318 Van Brunt St, Brooklyn, NY 11231",
+"type": "Dive Bar",
+"neighborhood": "Red Hook",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Strong Rope Brewery",
+"address": "185 Van Dyke St, Brooklyn, NY 11231",
+"type": "Brewery",
+"neighborhood": "Red Hook",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Brooklyn Crab",
+"address": "24 Reed St, Brooklyn, NY 11231",
+"type": "Bar",
+"neighborhood": "Red Hook",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Sunken Harbor Club",
+"address": "372 Fulton St, Brooklyn, NY 11201",
+"type": "Cocktail Bar",
+"neighborhood": "Downtown Brooklyn",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Alamo Drafthouse House of Wax",
+"address": "445 Albee Square W, Brooklyn, NY 11201",
+"type": "Bar",
+"neighborhood": "Downtown Brooklyn",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Livingston Manor",
+"address": "42 Hoyt St, Brooklyn, NY 11201",
+"type": "Bar",
+"neighborhood": "Downtown Brooklyn",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Someday Bar NYC",
+"address": "364 Atlantic Ave, Brooklyn, NY 11217",
+"type": "Sports Bar",
+"neighborhood": "Boerum Hill",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Floyd NY",
+"address": "131 Atlantic Ave, Brooklyn, NY 11201",
+"type": "Bar",
+"neighborhood": "Brooklyn Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Montero Bar & Grill",
+"address": "73 Atlantic Ave, Brooklyn, NY 11201",
+"type": "Dive Bar",
+"neighborhood": "Brooklyn Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Brooklyn Heights Social Club",
+"address": "1 Hotel Brooklyn Bridge, 60 Furman St, Brooklyn, NY 11201",
+"type": "Rooftop Bar",
+"neighborhood": "Brooklyn Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Time Out Market Rooftop",
+"address": "55 Water St, Brooklyn, NY 11201",
+"type": "Rooftop Bar",
+"neighborhood": "DUMBO",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Superfine",
+"address": "126 Front St, Brooklyn, NY 11201",
+"type": "Bar",
+"neighborhood": "DUMBO",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Randolph Beer DUMBO",
+"address": "82 Prospect St, Brooklyn, NY 11201",
+"type": "Beer Hall",
+"neighborhood": "DUMBO",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Donovan's Pub",
+"address": "57-24 Roosevelt Ave, Woodside, NY 11377",
+"type": "Irish Pub",
+"neighborhood": "Woodside",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Sean Og's",
+"address": "60-02 Woodside Ave, Woodside, NY 11377",
+"type": "Irish Pub",
+"neighborhood": "Woodside",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Cuckoo's Nest",
+"address": "61-04 Woodside Ave, Woodside, NY 11377",
+"type": "Irish Pub",
+"neighborhood": "Woodside",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Saints & Sinners",
+"address": "59-21 Roosevelt Ave, Woodside, NY 11377",
+"type": "Irish Pub",
+"neighborhood": "Woodside",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Beerkeeper",
+"address": "58-15 Woodside Ave, Woodside, NY 11377",
+"type": "Bar",
+"neighborhood": "Woodside",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Maggie Mae's",
+"address": "41-15 Queens Blvd, Sunnyside, NY 11104",
+"type": "Irish Pub",
+"neighborhood": "Sunnyside",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Courtyard Ale House",
+"address": "40-18 Queens Blvd, Sunnyside, NY 11104",
+"type": "Bar",
+"neighborhood": "Sunnyside",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Sanger Hall",
+"address": "48-20 Skillman Ave, Sunnyside, NY 11104",
+"type": "Bar",
+"neighborhood": "Sunnyside",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bantry Bay Publick House",
+"address": "33-01 Greenpoint Ave, Long Island City, NY 11101",
+"type": "Irish Pub",
+"neighborhood": "Long Island City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dominie's Hoek",
+"address": "48-17 Vernon Blvd, Long Island City, NY 11101",
+"type": "Bar",
+"neighborhood": "Long Island City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dutch Kills",
+"address": "27-24 Jackson Ave, Long Island City, NY 11101",
+"type": "Cocktail Bar",
+"neighborhood": "Long Island City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Gutter LIC",
+"address": "10-22 46th Ave, Long Island City, NY 11101",
+"type": "Bar / Bowling",
+"neighborhood": "Long Island City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Fifth Hammer Brewing",
+"address": "10-28 46th Ave, Long Island City, NY 11101",
+"type": "Brewery",
+"neighborhood": "Long Island City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "LIC Bar",
+"address": "45-58 Vernon Blvd, Long Island City, NY 11101",
+"type": "Bar",
+"neighborhood": "Long Island City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Beast Next Door",
+"address": "42-51 27th St, Long Island City, NY 11101",
+"type": "Cocktail Bar",
+"neighborhood": "Long Island City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Huntress",
+"address": "24-03 41st Ave, Long Island City, NY 11101",
+"type": "Bar",
+"neighborhood": "Long Island City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Diamond Dogs",
+"address": "34-04 31st Ave, Astoria, NY 11106",
+"type": "Cocktail Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Madam Marie's",
+"address": "35-15 Broadway, Astoria, NY 11106",
+"type": "Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Sweet Afton",
+"address": "30-09 34th St, Astoria, NY 11103",
+"type": "Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Bonnie",
+"address": "29-12 23rd Ave, Astoria, NY 11105",
+"type": "Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Mosaic",
+"address": "25-19 24th Ave, Astoria, NY 11102",
+"type": "Cocktail Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Sek'end Sun",
+"address": "32-11 Broadway, Astoria, NY 11106",
+"type": "Cocktail Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Heart of Gold",
+"address": "37-14 31st Ave, Astoria, NY 11103",
+"type": "Beer Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Judy & Punch",
+"address": "34-08 30th Ave, Astoria, NY 11103",
+"type": "Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Wolfhound",
+"address": "38-14 30th Ave, Astoria, NY 11103",
+"type": "Irish Pub",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Irish Rover",
+"address": "37-18 28th Ave, Astoria, NY 11103",
+"type": "Irish Pub",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bohemian Hall & Beer Garden",
+"address": "29-19 24th Ave, Astoria, NY 11102",
+"type": "Beer Garden",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Letlove Inn",
+"address": "27-20 23rd Ave, Astoria, NY 11105",
+"type": "Cocktail Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Last Word",
+"address": "31-30 Ditmars Blvd, Astoria, NY 11105",
+"type": "Cocktail Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Queens Room",
+"address": "36-02 Ditmars Blvd, Astoria, NY 11105",
+"type": "Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Break Bar & Billiards",
+"address": "32-04 Broadway, Astoria, NY 11106",
+"type": "Sports Bar",
+"neighborhood": "Astoria",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Rambling House",
+"address": "4292 Katonah Ave, Bronx, NY 10470",
+"type": "Irish Pub",
+"neighborhood": "Woodlawn",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Heritage Bar & Restaurant",
+"address": "960 McLean Ave, Yonkers, NY 10704",
+"type": "Irish Pub",
+"neighborhood": "McLean Ave",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Rory Dolan's",
+"address": "890 McLean Ave, Yonkers, NY 10704",
+"type": "Irish Pub",
+"neighborhood": "McLean Ave",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Behans Public House",
+"address": "4299 Katonah Ave, Bronx, NY 10470",
+"type": "Irish Pub",
+"neighborhood": "Woodlawn",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Keane's Bar & Restaurant",
+"address": "4344 Katonah Ave, Bronx, NY 10470",
+"type": "Irish Pub",
+"neighborhood": "Woodlawn",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "An Beal Bocht Cafe",
+"address": "445 W 238th St, Bronx, NY 10463",
+"type": "Irish Pub / Music",
+"neighborhood": "Riverdale",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bronx Alehouse",
+"address": "216 W 238th St, Bronx, NY 10463",
+"type": "Beer Bar",
+"neighborhood": "Kingsbridge",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bronx Beer Hall",
+"address": "2344 Arthur Ave, Bronx, NY 10458",
+"type": "Beer Hall",
+"neighborhood": "Belmont",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Clinton Hall Bronx",
+"address": "601 E 189th St, Bronx, NY 10458",
+"type": "Beer Hall",
+"neighborhood": "Belmont",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bronx Brewery",
+"address": "856 E 136th St, Bronx, NY 10454",
+"type": "Brewery",
+"neighborhood": "Port Morris",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Charlies Bar & Kitchen",
+"address": "112 Lincoln Ave, Bronx, NY 10454",
+"type": "Bar",
+"neighborhood": "Mott Haven",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bronx Draft House",
+"address": "884 Gerard Ave, Bronx, NY 10452",
+"type": "Sports Bar",
+"neighborhood": "Concourse",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "O'Neill's",
+"address": "1614 Forest Ave, Staten Island, NY 10302",
+"type": "Irish Pub",
+"neighborhood": "Staten Island",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Jody's Club Forest",
+"address": "372 Forest Ave, Staten Island, NY 10301",
+"type": "Bar",
+"neighborhood": "Staten Island",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Coupe",
+"address": "379 Van Duzer St, Staten Island, NY 10304",
+"type": "Cocktail Bar",
+"neighborhood": "Staten Island",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Flagship Brewing",
+"address": "40 Minthorne St, Staten Island, NY 10301",
+"type": "Brewery",
+"neighborhood": "Staten Island",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Hop Shoppe",
+"address": "372 Van Duzer St, Staten Island, NY 10304",
+"type": "Beer Bar",
+"neighborhood": "Staten Island",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Finnegan's Pub",
+"address": "734 Willow Ave, Hoboken, NJ 07030",
+"type": "Irish Pub",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Moran's Pub",
+"address": "501 Garden St, Hoboken, NJ 07030",
+"type": "Irish Pub",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Shannon",
+"address": "106 1st St, Hoboken, NJ 07030",
+"type": "Irish Pub / Dance",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "McSwiggan's Pub",
+"address": "110 1st St, Hoboken, NJ 07030",
+"type": "Irish Pub",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Willie McBride's",
+"address": "616 Grand St, Hoboken, NJ 07030",
+"type": "Irish Pub / Music",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Ferryman",
+"address": "94 Bloomfield St, Hoboken, NJ 07030",
+"type": "Irish Pub",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Green Rock Tap & Grill",
+"address": "70 Hudson St, Hoboken, NJ 07030",
+"type": "Sports Bar / Nightlife",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Madd Hatter",
+"address": "221 Washington St, Hoboken, NJ 07030",
+"type": "Sports Bar / Club",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Pig & Parrot",
+"address": "77 Hudson St, Hoboken, NJ 07030",
+"type": "Bar / Nightlife",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Black Bear Bar & Grill",
+"address": "205 Washington St, Hoboken, NJ 07030",
+"type": "Sports Bar",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Ale House",
+"address": "1034 Willow Ave, Hoboken, NJ 07030",
+"type": "Bar",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "8th Street Tavern",
+"address": "800 Washington St, Hoboken, NJ 07030",
+"type": "Bar",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "10th & Willow",
+"address": "935 Willow Ave, Hoboken, NJ 07030",
+"type": "Bar",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Ainsworth Hoboken",
+"address": "310 Sinatra Dr, Hoboken, NJ 07030",
+"type": "Bar",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Antique Bar & Bakery",
+"address": "122 Willow Ave, Hoboken, NJ 07030",
+"type": "Bar",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bin 14",
+"address": "1314 Washington St, Hoboken, NJ 07030",
+"type": "Wine Bar",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dear Maud",
+"address": "205 1st St, Hoboken, NJ 07030",
+"type": "Cocktail Bar",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Northern Soul",
+"address": "700 1st St, Hoboken, NJ 07030",
+"type": "Bar",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Pier 13",
+"address": "1301 Sinatra Dr N, Hoboken, NJ 07030",
+"type": "Outdoor Bar",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "House of 'Que",
+"address": "340 Sinatra Dr, Hoboken, NJ 07030",
+"type": "Bar / Music",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Birch Hoboken",
+"address": "92 River St, Hoboken, NJ 07030",
+"type": "Nightclub",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "O'Haras Downtown",
+"address": "172 1st St, Jersey City, NJ 07302",
+"type": "Irish Pub",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "O'Leary's Publik House",
+"address": "788 Garfield Ave, Jersey City, NJ 07305",
+"type": "Irish Pub",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Grace O'Malley's Whiskey Chapel",
+"address": "140 Newark Ave, Jersey City, NJ 07302",
+"type": "Irish Pub",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Dagda Irish Prochog",
+"address": "123 Newark Ave, Jersey City, NJ 07302",
+"type": "Irish Pub",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "New Park Tavern",
+"address": "575 West Side Ave, Jersey City, NJ 07304",
+"type": "Irish Pub",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "143 Social",
+"address": "143 Newark Ave, Jersey City, NJ 07302",
+"type": "Cocktail Lounge",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Junto",
+"address": "68 Mercer St, Jersey City, NJ 07302",
+"type": "Cocktail Bar",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Porta Jersey City",
+"address": "135 Newark Ave, Jersey City, NJ 07302",
+"type": "Bar / Rooftop",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Pet Shop",
+"address": "193 Newark Ave, Jersey City, NJ 07302",
+"type": "Bar",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Lucky 7 Tavern",
+"address": "322 2nd St, Jersey City, NJ 07302",
+"type": "Dive Bar",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Keyhole Bar",
+"address": "242 Bay St, Jersey City, NJ 07302",
+"type": "Dive Bar",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Ed & Mary's",
+"address": "174 Coles St, Jersey City, NJ 07302",
+"type": "Bar",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Hudson Hound",
+"address": "8 Erie St, Jersey City, NJ 07302",
+"type": "Irish Pub",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Hudson Hall",
+"address": "364 Marin Blvd, Jersey City, NJ 07302",
+"type": "Beer Hall",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Departed Soles Brewing",
+"address": "150 Bay St, Jersey City, NJ 07302",
+"type": "Brewery",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "902 Brewing",
+"address": "101 Pacific Ave, Jersey City, NJ 07304",
+"type": "Brewery",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "South House",
+"address": "149 Newark Ave, Jersey City, NJ 07302",
+"type": "Bar",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Hutton",
+"address": "225 Hutton St, Jersey City, NJ 07307",
+"type": "Bar",
+"neighborhood": "Jersey City Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Fox & Crow",
+"address": "594 Palisade Ave, Jersey City, NJ 07307",
+"type": "Bar / Music",
+"neighborhood": "Jersey City Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Corkscrew Bar",
+"address": "61 Congress St, Jersey City, NJ 07307",
+"type": "Bar",
+"neighborhood": "Jersey City Heights",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Pilsener Haus & Biergarten",
+"address": "1422 Grand St, Hoboken, NJ 07030",
+"type": "Beer Garden",
+"neighborhood": "Hoboken",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Six26",
+"address": "128 Christopher Columbus Dr, Jersey City, NJ 07302",
+"type": "Bar / Club",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "RoofTop at Exchange Place",
+"address": "1 Exchange Pl, Jersey City, NJ 07302",
+"type": "Rooftop Bar",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "The Factory",
+"address": "451 Communipaw Ave, Jersey City, NJ 07304",
+"type": "Bar / Lounge",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "White Eagle Hall",
+"address": "337 Newark Ave, Jersey City, NJ 07302",
+"type": "Live Music Venue",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Barcade Jersey City",
+"address": "163 Newark Ave, Jersey City, NJ 07302",
+"type": "Arcade Bar",
+"neighborhood": "Jersey City",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Jimenez Tobacco",
+"address": "31 Liberty St, Newark, NJ 07102",
+"type": "Cigar Bar",
+"neighborhood": "Newark",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "McGovern's Tavern",
+"address": "58-60 New St, Newark, NJ 07102",
+"type": "Irish Pub",
+"neighborhood": "Newark",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Kilkenny Alehouse",
+"address": "27 Central Ave, Newark, NJ 07102",
+"type": "Irish Pub",
+"neighborhood": "Newark",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Bar Vanquish",
+"address": "VERIFY ADDRESS",
+"type": "Bar / Lounge",
+"neighborhood": "Newark",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Allure Lounge",
+"address": "VERIFY ADDRESS",
+"type": "Lounge / Club",
+"neighborhood": "Newark",
+"weeklyHours": "VERIFY"
+},
+{
+"name": "Cucalambe Night Club",
+"address": "4418 Bergenline Ave, Union City, NJ 07087",
+"type": "Nightclub",
+"neighborhood": "Union City",
+"weeklyHours": "VERIFY"
+}
+]
