@@ -15,6 +15,7 @@
     "seed:irish": "tsx --env-file=.env.local scripts/addIrishBarsBatch.ts",
     "seed:directory": "tsx --env-file=.env.local scripts/addVenueDirectoryBatch.ts",
     "cleanup:demo": "tsx --env-file=.env.local scripts/removeDemoData.ts",
+    "dedupe:venues": "tsx --env-file=.env.local scripts/dedupeVenues.ts",
     "backfill:hours": "tsx --env-file=.env.local scripts/backfillTypicalHours.ts",
     "fix:hours-timestamp": "tsx --env-file=.env.local scripts/fixBackfilledHoursTimestamp.ts",
     "test": "vitest run"
