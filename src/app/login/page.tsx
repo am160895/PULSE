@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Radio } from "lucide-react";
 import { requestJson } from "@/lib/http/requestJson";
+import { trackEvent } from "@/lib/analytics/track";
 
 export default function LoginPage() {
   return (
@@ -21,6 +22,8 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => trackEvent("AUTH_STARTED"), []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

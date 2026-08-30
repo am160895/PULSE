@@ -2,11 +2,11 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Bookmark, Info, MapPin, Music, Share2, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Bookmark, Clock, Info, MapPin, Music, Navigation, Share2, Users } from "lucide-react";
 import { useInvalidateVenue, useVenue, useVenueHistory } from "@/hooks/api";
 import {
   ClosedVenueStatus,
-  ConfidenceBadge,
   FreshnessBadge,
   OpenStateBadge,
   PulseLabelBadge,
@@ -18,14 +18,17 @@ import { VsTypicalBadge } from "@/components/venues/VsTypicalBadge";
 import { ActivityGraph } from "@/components/venues/ActivityGraph";
 import { ReportSheet, type ReportSubmitResult } from "@/components/venues/ReportSheet";
 import { QuickPulseCheck } from "@/components/venues/QuickPulseCheck";
-import { WeeklyHoursSheet } from "@/components/venues/WeeklyHoursSheet";
+import { HoursWeekList } from "@/components/venues/HoursWeekList";
 import { ContributionSuccess, type ContributionSuccessProps } from "@/components/gamification/ContributionSuccess";
 import { BadgeCelebration } from "@/components/gamification/BadgeCelebration";
+import { ShareStatusPrompt } from "@/components/venues/ShareStatusPrompt";
 import { BADGE_CATALOG } from "@/lib/gamification/badgeCatalog";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
 import { SignUpPrompt } from "@/components/ui/SignUpPrompt";
 import { VENUE_TYPE_LABELS } from "@/config/constants";
 import { requestJson } from "@/lib/http/requestJson";
+import { buildShareStatusText } from "@/lib/share/shareText";
+import { trackEvent } from "@/lib/analytics/track";
 import { format, parseISO } from "date-fns";
 import type { BadgeCode, ContributorLevel } from "@/types";
 
@@ -43,6 +46,12 @@ interface BadgeUnlock {
   xpEventId: string | null;
 }
 
+/** The write action an anonymous session was trying to do when it hit SignUpPrompt —
+ * carried through signup/login's `next` redirect as `?intent=` so the venue page can
+ * resume it automatically instead of just landing the user back on a blank page (growth
+ * spec: "return to exact prior context after authenticating"). */
+type WriteIntent = "im-here" | "report" | "save" | "claim";
+
 function progressFromXp(xp: XpResult) {
   return {
     label: xp.level.label,
@@ -58,7 +67,6 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
   const invalidate = useInvalidateVenue();
   const [showReport, setShowReport] = useState(false);
   const [showQuickCheck, setShowQuickCheck] = useState(false);
-  const [showHours, setShowHours] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [imHereSubmitting, setImHereSubmitting] = useState(false);
   const [imHereError, setImHereError] = useState<string | null>(null);
@@ -68,13 +76,22 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
   const [lastOwnReportId, setLastOwnReportId] = useState<string | null>(null);
   const shownConfirmationsRef = useRef<Set<string>>(new Set());
   const [claiming, setClaiming] = useState(false);
-  const [signUpReason, setSignUpReason] = useState<string | null>(null);
+  const [signUpPrompt, setSignUpPrompt] = useState<{ reason: string; intent: WriteIntent } | null>(null);
+  const [showSharePrompt, setShowSharePrompt] = useState(false);
+  const pendingShareRef = useRef(false);
+  const router = useRouter();
+  const resumedIntentRef = useRef(false);
 
   function celebrateNextBadge() {
     const next = badgeQueueRef.current.shift();
     if (next) {
       const def = BADGE_CATALOG[next];
       setCelebratingBadge({ name: def.name, description: def.description, motif: def.motif });
+    } else if (pendingShareRef.current) {
+      // Only offer the share prompt once every unlocked-badge celebration has been seen —
+      // stacking it under BadgeCelebration's full-screen backdrop would hide it entirely.
+      pendingShareRef.current = false;
+      setShowSharePrompt(true);
     }
   }
 
@@ -82,6 +99,13 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     if (unlocks.length === 0) return;
     badgeQueueRef.current.push(...unlocks.map((u) => u.code));
     if (!celebratingBadge) celebrateNextBadge();
+  }
+
+  /** Sharing-loop growth spec: offer "Share live status" after a successful I'm Here or
+   * report, deferred until any badge celebration for that same action has been dismissed. */
+  function offerShareAfter(unlocks: BadgeUnlock[]) {
+    if (unlocks.length > 0) pendingShareRef.current = true;
+    else setShowSharePrompt(true);
   }
 
   // Delayed accuracy confirmations (spec §5) surface here — useVenue's own 20s poll is
@@ -104,6 +128,36 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     if (data.newlyUnlockedBadges?.length) queueBadgeCelebrations(data.newlyUnlockedBadges);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.newlyConfirmedSignals]);
+
+  // Growth-funnel analytics (acquisition spec) plus resuming a write action that got
+  // interrupted by SignUpPrompt before authenticating — reading window.location.search
+  // directly rather than useSearchParams() avoids needing a Suspense boundary around this
+  // page just for two optional query params.
+  useEffect(() => {
+    if (!data?.venue.id) return;
+    trackEvent("VENUE_VIEW", data.venue.id);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("src") === "share") trackEvent("SHARED_LINK_OPENED", data.venue.id);
+
+    const intent = params.get("intent") as WriteIntent | null;
+    if (intent && !resumedIntentRef.current) {
+      resumedIntentRef.current = true;
+      if (intent === "im-here") void handleImHere();
+      // A deliberate one-time imperative action resuming an interrupted intent on mount,
+      // not state derived from a prop/subscription — the usual "don't setState in an
+      // effect" rationale doesn't apply here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      else if (intent === "report") setShowReport(true);
+      else if (intent === "save") void handleToggleSaved();
+      else if (intent === "claim") void handleClaim();
+
+      // Strip it so a refresh or the browser back button doesn't repeat the action.
+      params.delete("intent");
+      const qs = params.toString();
+      router.replace(qs ? `${window.location.pathname}?${qs}` : window.location.pathname, { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.venue.id]);
 
   if (isError) {
     return (
@@ -144,29 +198,59 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     pulse.trend === "FALLING_FAST";
   const showBetterMove = !isDirectory && !isClosed && hasProblem && alternatives.length > 0;
 
+  function currentShareText() {
+    return buildShareStatusText({
+      venueName: venue.name,
+      isDirectory,
+      isClosed,
+      pulseScore: pulse.pulseScore,
+      pulseLabel: pulse.pulseLabel,
+      openStatusText: venue.openStatus.displayText,
+      trend: pulse.trend,
+      waitEstimate: pulse.waitEstimate,
+    });
+  }
+
+  // ?src=share marks the link as opened-from-a-share on the receiving end (see the
+  // SHARED_LINK_OPENED effect above) — a real, deep-linkable venue URL, viewable without
+  // an account, matching the growth spec's sharing-loop requirement.
+  function shareableUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("src", "share");
+    return url.toString();
+  }
+
   async function handleShare() {
-    const url = window.location.href;
+    const url = shareableUrl();
     if (navigator.share) {
       try {
-        const text = isDirectory ? `Check out ${venue.name} on PULSE` : `${venue.name} is ${pulse.pulseScore} on PULSE right now`;
-        await navigator.share({ title: venue.name, text, url });
+        await navigator.share({ title: venue.name, text: currentShareText(), url });
+        trackEvent("VENUE_SHARED", venue.id);
         return;
       } catch {
         // user cancelled — fall through to clipboard
       }
     }
     await navigator.clipboard.writeText(url);
+    trackEvent("VENUE_SHARED", venue.id);
     setShareMessage("Link copied");
     setTimeout(() => setShareMessage(null), 2000);
   }
 
   async function handleToggleSaved() {
-    const result = await requestJson(`/api/venues/${venue.id}/saved`, { method: "POST" });
+    const result = await requestJson<{ isSaved: boolean }>(`/api/venues/${venue.id}/saved`, { method: "POST" });
     if (result.ok) {
       invalidate(venue.id);
+      if (result.data.isSaved) trackEvent("VENUE_SAVED", venue.id);
     } else if (result.code === "ANONYMOUS_SESSION") {
-      setSignUpReason("Create a free account to save venues.");
+      setSignUpPrompt({ reason: "Create a free account to save venues.", intent: "save" });
     }
+  }
+
+  function handleDirections() {
+    trackEvent("DIRECTIONS_CLICKED", venue.id);
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${venue.latitude},${venue.longitude}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   async function handleImHere() {
@@ -180,7 +264,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
 
     if (!result.ok) {
       if (result.code === "ANONYMOUS_SESSION") {
-        setSignUpReason("Create a free account to share when you're here.");
+        setSignUpPrompt({ reason: "Create a free account to share when you're here.", intent: "im-here" });
       } else {
         setImHereError(result.error);
       }
@@ -197,10 +281,13 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
       onDismiss: () => setToast(null),
     });
     invalidate(venue.id);
+    trackEvent("IM_HERE_COMPLETED", venue.id);
     if (result.data.badgesUnlocked.length > 0) queueBadgeCelebrations(result.data.badgesUnlocked);
     // Immediately follow up with a fast, skippable 3-tap check — I'm Here already earned
     // its own XP above; answering these earns meaningfully more on top, through the same
-    // report pipeline as the full Report sheet.
+    // report pipeline as the full Report sheet. The share offer waits for that flow to
+    // conclude (submitted or skipped) rather than firing here too — see its own call
+    // sites below — so it never stacks under the quick-check sheet.
     setShowQuickCheck(true);
   }
 
@@ -209,6 +296,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
   // XP/badge/impact feedback is identical regardless of which flow produced it.
   function handleReportSubmitted(result: ReportSubmitResult) {
     invalidate(venue.id);
+    trackEvent("REPORT_COMPLETED", venue.id);
     setLastOwnReportId(result.reportId);
 
     setToast({
@@ -220,6 +308,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
       onDismiss: () => setToast(null),
     });
     if (result.badgesUnlocked.length > 0) queueBadgeCelebrations(result.badgesUnlocked);
+    offerShareAfter(result.badgesUnlocked);
   }
 
   async function handleClaim() {
@@ -229,7 +318,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     if (result.ok) {
       refetch();
     } else if (result.code === "ANONYMOUS_SESSION") {
-      setSignUpReason("Create a free account to claim this venue.");
+      setSignUpPrompt({ reason: "Create a free account to claim this venue.", intent: "claim" });
     }
   }
 
@@ -258,11 +347,9 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
         </div>
       </div>
 
-      <button onClick={() => setShowHours(true)} className="text-left mb-2">
-        <span className="text-[13px] font-medium" style={{ color: isClosed ? "var(--text-secondary)" : "var(--active)" }}>
-          {venue.openStatus.displayText}
-        </span>
-      </button>
+      <p className="text-[13px] font-medium mb-2" style={{ color: isClosed ? "var(--text-secondary)" : "var(--active)" }}>
+        {venue.openStatus.displayText}
+      </p>
 
       {isDirectory ? (
         <div className="mb-4 py-3 border-y border-[var(--border)]">
@@ -282,7 +369,6 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
             <PulseScoreDisplay score={pulse.pulseScore} label={pulse.pulseLabel} />
             <div className="flex flex-col gap-1.5">
               <PulseLabelBadge label={pulse.pulseLabel} />
-              <ConfidenceBadge label={pulse.confidenceLabel} />
               {venue.vsTypical && <VsTypicalBadge comparison={venue.vsTypical} />}
             </div>
           </div>
@@ -324,6 +410,13 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
         </>
       )}
 
+      {/* Always visible, never gated behind a tap — every venue's hours must be legible
+          straight off the page, regardless of open/closed/directory state. */}
+      <section className="mb-5">
+        <SectionTitle icon={<Clock size={14} />} title="Hours" />
+        <HoursWeekList hours={venue.hours} timeZone={venue.timezone} />
+      </section>
+
       {venue.hoursDiscrepancy && (
         <p className="mb-4 text-[12.5px]" style={{ color: "var(--rising)" }}>
           Possible hours discrepancy — recent verified activity at a venue marked closed.
@@ -348,7 +441,13 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
         <button className="btn btn-primary col-span-1" onClick={handleImHere} disabled={imHereSubmitting}>
           {imHereSubmitting ? "…" : "I'm here"}
         </button>
-        <button className="btn btn-secondary" onClick={() => setShowReport(true)}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => {
+            trackEvent("REPORT_STARTED", venue.id);
+            setShowReport(true);
+          }}
+        >
           Report
         </button>
         <button className="btn btn-secondary" onClick={handleToggleSaved}>
@@ -371,7 +470,10 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
         ) : (
           <div />
         )}
-        <button className="btn btn-secondary col-span-2" onClick={handleShare}>
+        <button className="btn btn-secondary" onClick={handleDirections}>
+          <Navigation size={15} /> Directions
+        </button>
+        <button className="btn btn-secondary" onClick={handleShare}>
           <Share2 size={15} /> {shareMessage ?? "Share"}
         </button>
       </div>
@@ -428,7 +530,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
           }}
           onAnonymous={() => {
             setShowReport(false);
-            setSignUpReason("Create a free account to report activity.");
+            setSignUpPrompt({ reason: "Create a free account to report activity.", intent: "report" });
           }}
         />
       )}
@@ -436,21 +538,34 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
       {showQuickCheck && (
         <QuickPulseCheck
           venueId={venue.id}
-          onClose={() => setShowQuickCheck(false)}
+          onClose={() => {
+            setShowQuickCheck(false);
+            offerShareAfter([]); // I'm Here alone still earns the share offer, even skipped
+          }}
           onSubmitted={(result) => {
             setShowQuickCheck(false);
             handleReportSubmitted(result);
           }}
           onAnonymous={() => {
             setShowQuickCheck(false);
-            setSignUpReason("Create a free account to report activity.");
+            setSignUpPrompt({ reason: "Create a free account to report activity.", intent: "report" });
           }}
         />
       )}
 
-      {showHours && <WeeklyHoursSheet hours={venue.hours} timeZone={venue.timezone} onClose={() => setShowHours(false)} />}
+      {signUpPrompt && (
+        <SignUpPrompt reason={signUpPrompt.reason} intent={signUpPrompt.intent} onClose={() => setSignUpPrompt(null)} />
+      )}
 
-      {signUpReason && <SignUpPrompt reason={signUpReason} onClose={() => setSignUpReason(null)} />}
+      {showSharePrompt && (
+        <ShareStatusPrompt
+          venueName={venue.name}
+          url={shareableUrl()}
+          shareText={currentShareText()}
+          onShared={() => trackEvent("VENUE_SHARED", venue.id)}
+          onClose={() => setShowSharePrompt(false)}
+        />
+      )}
 
       {toast && <ContributionSuccess {...toast} />}
 

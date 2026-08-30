@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { SupabaseQueryError } from "@/lib/supabase/unwrap";
 import { createUserWithProfile, getProfileByAuthUserId, getProfileByUsername, provisionGuestProfile } from "@/lib/data/social";
 import { listVerifiedOwnedVenueIds } from "@/lib/data/ownership";
+import { recordAnalyticsEvent } from "@/lib/data/analytics";
 import { sendWelcomeEmail } from "@/lib/notifications/email";
 import type { Profile } from "@/types";
 
@@ -103,8 +104,9 @@ export async function signup(input: unknown): Promise<SignupResult> {
     return { ok: false, error: createErr?.message ?? "Could not create account" };
   }
 
+  let profile: Profile;
   try {
-    await createUserWithProfile({ authUserId: created.user.id, email, username, displayName, homeCity: "New York City" });
+    profile = await createUserWithProfile({ authUserId: created.user.id, email, username, displayName, homeCity: "New York City" });
   } catch (err) {
     // Roll back the orphaned auth user so a failed profile insert (e.g. a race on the
     // username uniqueness check above) doesn't leave a dangling account with no profile.
@@ -119,9 +121,10 @@ export async function signup(input: unknown): Promise<SignupResult> {
   const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
   if (signInErr) return { ok: false, error: "Account created — please log in" };
 
-  // Not awaited — a slow or failing welcome email must never delay/break signup itself;
-  // sendWelcomeEmail already swallows its own errors internally.
+  // Not awaited — a slow or failing welcome email/analytics write must never delay/break
+  // signup itself; both already swallow their own errors internally.
   void sendWelcomeEmail(email, displayName);
+  void recordAnalyticsEvent({ event: "AUTH_COMPLETED", profileId: profile.id });
 
   return { ok: true, userId: created.user.id };
 }
@@ -140,6 +143,9 @@ export async function login(input: unknown): Promise<LoginResult> {
   const supabase = await supabaseServer();
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error || !data.user) return { ok: false, error: "Invalid email or password" };
+
+  const profile = await getProfileByAuthUserId(data.user.id);
+  void recordAnalyticsEvent({ event: "AUTH_COMPLETED", profileId: profile?.id ?? null });
 
   return { ok: true, userId: data.user.id };
 }

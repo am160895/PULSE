@@ -93,13 +93,20 @@ export function calculatePulseScore(input: CalculatePulseScoreInput): PulseResul
     friendActivity: lerp(SCORE_WEIGHTS_LOW_DATA.friendActivity, SCORE_WEIGHTS_HIGH_DATA.friendActivity, reportFactor),
   };
 
+  // Falls back to the historical score ONLY for display purposes (the "components"
+  // breakdown below needs something to show under "Live reports" — see there). The blend
+  // math must NOT use this fallback: historicalScore already has its own weighted slot,
+  // and reusing it here too would silently double-count it under the liveReports weight
+  // whenever there are zero live reports, inflating historical's real influence on the
+  // final score by however much SCORE_WEIGHTS_*.liveReports happens to be.
+  const hasLiveReports = liveReportSignal.reportScore !== null;
   const reportComponentValue = liveReportSignal.reportScore ?? historicalSignal.historicalScore;
 
   const totalWeight =
-    weights.liveReports + weights.trend + weights.historical + weights.event + weights.friendActivity;
+    (hasLiveReports ? weights.liveReports : 0) + weights.trend + weights.historical + weights.event + weights.friendActivity;
 
   const rawBlend =
-    (weights.liveReports * reportComponentValue +
+    ((hasLiveReports ? weights.liveReports * liveReportSignal.reportScore! : 0) +
       weights.trend * trendSignal.trendComponentScore +
       weights.historical * historicalSignal.historicalScore +
       weights.event * eventSignal.eventComponentScore +
@@ -139,12 +146,19 @@ export function calculatePulseScore(input: CalculatePulseScoreInput): PulseResul
 
   const freshness = calculateFreshness(liveReportSignal.freshestAgeMinutes);
 
-  const components: PulseReasonComponent[] = [
-    {
+  const components: PulseReasonComponent[] = [];
+  // Omitted (not shown as a 0%-weighted, misleadingly-valued row) when there are no live
+  // reports — reportComponentValue would otherwise just be silently restating the
+  // historical score under a "Live reports" label, which is exactly the kind of fabricated
+  // precision this app's honesty principle rules out.
+  if (hasLiveReports) {
+    components.push({
       key: "liveReports",
       label: `Live reports · ${Math.round((weights.liveReports / totalWeight) * 100)}% weight`,
       value: Math.round(reportComponentValue),
-    },
+    });
+  }
+  components.push(
     {
       key: "historical",
       label: `Typical for this time · ${Math.round((weights.historical / totalWeight) * 100)}% weight`,
@@ -154,8 +168,8 @@ export function calculatePulseScore(input: CalculatePulseScoreInput): PulseResul
       key: "trend",
       label: `Momentum · ${Math.round((weights.trend / totalWeight) * 100)}% weight`,
       value: Math.round(trendSignal.trendComponentScore),
-    },
-  ];
+    }
+  );
   if (eventSignal.activeEvent) {
     components.push({ key: "event", label: `Event: ${eventSignal.activeEvent.name}`, value: Math.round(eventSignal.eventComponentScore) });
   }
@@ -206,6 +220,6 @@ function buildExplanation(input: {
   if (input.trend === "FALLING_FAST" || input.trend === "FALLING") parts.push("falling over the last 30 minutes");
 
   const base = `Based on ${parts.join(", ")}.`;
-  if (input.confidenceLabel === "LOW") return `${base} Confidence is low — treat this as a prediction.`;
+  if (input.confidenceLabel === "LOW") return `${base} Based mostly on typical activity for this time — treat this as an estimate.`;
   return base;
 }

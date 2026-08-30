@@ -650,19 +650,27 @@ export async function countAnyPresentAtVenue(venueId: string, now = new Date()):
   return active.filter((p) => p.status === "AT_VENUE").length;
 }
 
+// Mirrors repository.ts's MAX_IDS_PER_IN_CLAUSE — above this many ids, a single
+// .in("venue_id", venueIds) call's URL grows large enough to fail outright (a plain
+// "fetch failed", not a Postgres error) rather than actually reach PostgREST.
+const MAX_IDS_PER_IN_CLAUSE = 200;
+
 /** Batched sibling of countAnyPresentAtVenue — one round-trip for N venues instead of N.
  * Used by computeVenueStatesBatch (composeVenue.ts) for map/list views. */
 export async function countPresentAtVenues(venueIds: string[], now = new Date()): Promise<Map<string, number>> {
   if (venueIds.length === 0) return new Map();
-  const rows: Row[] = unwrap(
-    await supabaseAdmin()
-      .from("presence_events")
-      .select("venue_id")
-      .in("venue_id", venueIds)
-      .eq("status", "AT_VENUE")
-      .gt("expires_at", now.toISOString())
-  );
   const counts = new Map<string, number>();
-  for (const row of rows) counts.set(row.venue_id, (counts.get(row.venue_id) ?? 0) + 1);
+  for (let i = 0; i < venueIds.length; i += MAX_IDS_PER_IN_CLAUSE) {
+    const chunk = venueIds.slice(i, i + MAX_IDS_PER_IN_CLAUSE);
+    const rows: Row[] = unwrap(
+      await supabaseAdmin()
+        .from("presence_events")
+        .select("venue_id")
+        .in("venue_id", chunk)
+        .eq("status", "AT_VENUE")
+        .gt("expires_at", now.toISOString())
+    );
+    for (const row of rows) counts.set(row.venue_id, (counts.get(row.venue_id) ?? 0) + 1);
+  }
   return counts;
 }

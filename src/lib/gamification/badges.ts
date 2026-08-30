@@ -9,7 +9,13 @@ import {
   TREND_SPOTTER_MIN_CONFIRMED,
 } from "@/config/constants";
 import { zonedDateParts, zonedParts } from "@/lib/time/zoned";
-import { awardBadge, listRecentXpEventsForUser, listUserNeighborhoodProgress } from "@/lib/data/gamification";
+import {
+  awardBadge,
+  listRecentXpEventsForUser,
+  listUserBadges,
+  listUserNeighborhoodProgress,
+  tryAwardFoundingScout,
+} from "@/lib/data/gamification";
 
 export interface BadgeUnlock {
   code: BadgeCode;
@@ -96,9 +102,10 @@ export function earlySignalEvent(events: XpEvent[]): XpEvent | null {
 // ---------------------------------------------------------------------------
 
 export async function evaluateBadges(userId: string, now: Date = new Date()): Promise<BadgeUnlock[]> {
-  const [events, neighborhoods] = await Promise.all([
+  const [events, neighborhoods, existingBadges] = await Promise.all([
     listRecentXpEventsForUser(userId, now),
     listUserNeighborhoodProgress(userId),
+    listUserBadges(userId),
   ]);
 
   const unlocks: BadgeUnlock[] = [];
@@ -109,6 +116,25 @@ export async function evaluateBadges(userId: string, now: Date = new Date()): Pr
 
   const first = firstSignalEvent(events);
   if (first) await tryAward("FIRST_SIGNAL", "", first.id);
+
+  // Founding Scout requires at least one real contribution ever (not just signing up) —
+  // firstSignalEvent existing at all is exactly that condition. The atomic claim (see
+  // tryAwardFoundingScout) safely no-ops if the program is disabled/full, so calling it on
+  // every contribution by an as-yet-unbadged user is fine; the existingBadges check just
+  // avoids burning a slot on every future contribution once this user already holds it.
+  // Wrapped in try/catch deliberately: this is the one badge whose award path depends on
+  // infrastructure (a DB migration) that can lag behind a deploy — a missing/broken
+  // founding_scout_config table or claim_founding_scout_slot function must never take down
+  // report/presence submission for every user just because this one limited-run program
+  // isn't wired up yet.
+  if (first && !existingBadges.some((b) => b.badgeCode === "FOUNDING_SCOUT")) {
+    try {
+      const badge = await tryAwardFoundingScout(userId, first.id);
+      if (badge) unlocks.push({ code: "FOUNDING_SCOUT", neighborhood: "", xpEventId: first.id });
+    } catch (err) {
+      console.error("tryAwardFoundingScout failed (non-fatal):", err);
+    }
+  }
 
   if (lineSaverQualifies(events)) await tryAward("LINE_SAVER", "", null);
   if (nightOwlQualifies(events)) await tryAward("NIGHT_OWL", "", null);

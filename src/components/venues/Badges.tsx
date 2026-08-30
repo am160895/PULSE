@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowDownRight, ArrowUp, ArrowUpRight, Minus } from "lucide-react";
 import type { ConfidenceLabel, FreshnessLabel, PulseLabel, TrendDirection, VenueOpenState, VenueOpenStatus, WaitEstimate } from "@/types";
-import { PULSE_LABEL_TEXT } from "@/lib/pulse/labels";
+import { PULSE_LABEL_TEXT, TREND_TEXT } from "@/lib/pulse/labels";
 import { formatWaitEstimate } from "@/lib/pulse/waitEstimate";
 import { VENUE_OPEN_STATE_TEXT } from "@/lib/venues/openState";
 
@@ -19,14 +19,17 @@ export function markerClassForLabel(label: PulseLabel): string {
   }
 }
 
+// Same grey → tan → orange → deep-orange → red intensity ramp as the map markers
+// (globals.css's --level-* variables) — one color language for "how busy" everywhere it
+// shows up, not just on the map.
 export function PulseLabelBadge({ label }: { label: PulseLabel }) {
   const cls = markerClassForLabel(label);
   const styles: Record<string, { bg: string; color: string }> = {
-    hot: { bg: "var(--hot-soft)", color: "var(--hot)" },
-    rising: { bg: "var(--rising-soft)", color: "var(--rising)" },
-    active: { bg: "var(--active-soft)", color: "var(--active)" },
-    moderate: { bg: "var(--surface-3)", color: "var(--text-secondary)" },
-    quiet: { bg: "var(--quiet-soft)", color: "var(--text-muted)" },
+    hot: { bg: "var(--level-hot-soft)", color: "var(--level-hot)" },
+    rising: { bg: "var(--level-very-active-soft)", color: "var(--level-very-active)" },
+    active: { bg: "var(--level-busy-soft)", color: "var(--level-busy)" },
+    moderate: { bg: "var(--level-moderate-soft)", color: "var(--level-moderate)" },
+    quiet: { bg: "var(--level-quiet-soft)", color: "var(--level-quiet)" },
   };
   const s = styles[cls];
   return (
@@ -48,18 +51,18 @@ export function FreshnessBadge({ label }: { label: FreshnessLabel }) {
 }
 
 export function TrendIndicator({ trend, delta }: { trend: TrendDirection; delta: number }) {
-  const config: Record<TrendDirection, { icon: React.ReactNode; color: string; text: string }> = {
-    RISING_FAST: { icon: <ArrowUp size={13} />, color: "var(--hot)", text: "Rising fast" },
-    RISING: { icon: <ArrowUpRight size={13} />, color: "var(--rising)", text: "Rising" },
-    STABLE: { icon: <Minus size={13} />, color: "var(--text-muted)", text: "Stable" },
-    FALLING: { icon: <ArrowDownRight size={13} />, color: "var(--text-secondary)", text: "Falling" },
-    FALLING_FAST: { icon: <ArrowDown size={13} />, color: "var(--text-secondary)", text: "Falling fast" },
+  const config: Record<TrendDirection, { icon: React.ReactNode; color: string }> = {
+    RISING_FAST: { icon: <ArrowUp size={13} />, color: "var(--hot)" },
+    RISING: { icon: <ArrowUpRight size={13} />, color: "var(--rising)" },
+    STABLE: { icon: <Minus size={13} />, color: "var(--text-muted)" },
+    FALLING: { icon: <ArrowDownRight size={13} />, color: "var(--text-secondary)" },
+    FALLING_FAST: { icon: <ArrowDown size={13} />, color: "var(--text-secondary)" },
   };
   const c = config[trend];
   return (
     <span className="inline-flex items-center gap-1 text-[13px] font-medium" style={{ color: c.color }}>
       {c.icon}
-      {c.text}
+      {TREND_TEXT[trend]}
       {delta !== 0 && (
         <span className="text-[var(--text-muted)]">
           {delta > 0 ? "+" : ""}
@@ -82,11 +85,11 @@ export function OpenStateBadge({ state }: { state: VenueOpenState }) {
 }
 
 const SCORE_COLOR: Record<string, string> = {
-  hot: "var(--hot)",
-  rising: "var(--rising)",
-  active: "var(--active)",
-  moderate: "var(--text)",
-  quiet: "var(--text-muted)",
+  hot: "var(--level-hot)",
+  rising: "var(--level-very-active)",
+  active: "var(--level-busy)",
+  moderate: "var(--level-moderate)",
+  quiet: "var(--level-quiet)",
 };
 
 function formatVenueLocalTime(iso: string, timeZone: string): string {

@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, Map, User, Users } from "lucide-react";
+import { BookOpen, Compass, Map, User } from "lucide-react";
 
-const ITEMS = [
+const BASE_ITEMS = [
   { href: "/map", label: "Map", icon: Map },
   { href: "/explore", label: "Explore", icon: Compass },
-  { href: "/friends", label: "Friends", icon: Users },
-  { href: "/you", label: "You", icon: User },
+  { href: "/directory", label: "Directory", icon: BookOpen },
 ];
 
-export function BottomNav({ isAnonymous }: { isAnonymous: boolean }) {
+export function BottomNav({ isAnonymous, isAdmin }: { isAnonymous: boolean; isAdmin: boolean }) {
   const pathname = usePathname();
+  // For an admin, Profile IS the admin dashboard — no separate floating admin shortcut
+  // needed on top of it (that used to double as a fixed pill that could cover page
+  // content — see AppLayout's hasFloatingPill).
+  const items = [...BASE_ITEMS, { href: isAdmin ? "/admin" : "/you", label: "Profile", icon: User }];
 
   return (
     <>
@@ -26,10 +29,10 @@ export function BottomNav({ isAnonymous }: { isAnonymous: boolean }) {
         </Link>
       )}
       <nav className="bottom-nav">
-        {ITEMS.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
-            <Link key={href} href={href} className={`nav-item ${active ? "active" : ""}`}>
+            <Link key={label} href={href} className={`nav-item ${active ? "active" : ""}`}>
               <Icon size={20} strokeWidth={active ? 2.4 : 2} />
               <span>{label}</span>
             </Link>

@@ -1,4 +1,4 @@
-import type { BadgeCode, BadgeDefinition, UserBadge, UserNeighborhoodProgress, UserProgress, XpEvent, XpRewardType } from "@/types";
+import type { BadgeCode, BadgeDefinition, FoundingScoutConfig, UserBadge, UserNeighborhoodProgress, UserProgress, XpEvent, XpRewardType } from "@/types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { unwrap, SupabaseQueryError } from "@/lib/supabase/unwrap";
 
@@ -32,7 +32,18 @@ function rowToBadgeDefinition(row: Row): BadgeDefinition {
 }
 
 function rowToUserBadge(row: Row): UserBadge {
-  return { userId: row.user_id, badgeCode: row.badge_code, neighborhood: row.neighborhood, awardedAt: row.awarded_at, xpEventId: row.xp_event_id };
+  return {
+    userId: row.user_id,
+    badgeCode: row.badge_code,
+    neighborhood: row.neighborhood,
+    awardedAt: row.awarded_at,
+    xpEventId: row.xp_event_id,
+    sequenceNumber: row.sequence_number ?? null,
+  };
+}
+
+function rowToFoundingScoutConfig(row: Row): FoundingScoutConfig {
+  return { enabled: row.enabled, maxCount: row.max_count, awardedCount: row.awarded_count };
 }
 
 export interface InsertXpEventInput {
@@ -92,23 +103,61 @@ export async function listUserBadges(userId: string): Promise<UserBadge[]> {
   return rows.map(rowToUserBadge);
 }
 
-/** Returns null if this exact (user, badgeCode, neighborhood) was already awarded. */
+/**
+ * Returns null if this exact (user, badgeCode, neighborhood) was already awarded.
+ *
+ * sequence_number is only ever included in the insert when a real value is given
+ * (Founding Scout) — every other badge call site never passes one, and unconditionally
+ * sending `sequence_number: null` would fail with a schema-cache error on any database
+ * that hasn't yet run migration 0004 (which adds that column), breaking every badge type,
+ * not just Founding Scout, until that migration lands.
+ */
 export async function awardBadge(
   userId: string,
   badgeCode: BadgeCode,
   neighborhood: string,
-  xpEventId: string | null
+  xpEventId: string | null,
+  sequenceNumber: number | null = null
 ): Promise<UserBadge | null> {
-  const { data, error } = await supabaseAdmin()
-    .from("user_badges")
-    .insert({ user_id: userId, badge_code: badgeCode, neighborhood, xp_event_id: xpEventId })
-    .select()
-    .single();
+  const row: Row = { user_id: userId, badge_code: badgeCode, neighborhood, xp_event_id: xpEventId };
+  if (sequenceNumber !== null) row.sequence_number = sequenceNumber;
+
+  const { data, error } = await supabaseAdmin().from("user_badges").insert(row).select().single();
   if (error) {
     if (error.code === "23505") return null;
     throw new SupabaseQueryError(error);
   }
   return rowToUserBadge(data);
+}
+
+export async function getFoundingScoutConfig(): Promise<FoundingScoutConfig> {
+  const row = unwrap(await supabaseAdmin().from("founding_scout_config").select().eq("id", true).single());
+  return rowToFoundingScoutConfig(row);
+}
+
+export async function updateFoundingScoutConfig(
+  patch: Partial<Pick<FoundingScoutConfig, "enabled" | "maxCount">>
+): Promise<FoundingScoutConfig> {
+  const update: Row = {};
+  if (patch.enabled !== undefined) update.enabled = patch.enabled;
+  if (patch.maxCount !== undefined) update.max_count = patch.maxCount;
+  const row = unwrap(await supabaseAdmin().from("founding_scout_config").update(update).eq("id", true).select().single());
+  return rowToFoundingScoutConfig(row);
+}
+
+/**
+ * Atomically claims the next Founding Scout sequence number (via the claim_founding_scout_slot
+ * SQL function — see migration 0004) and, only if a slot was actually granted, awards the
+ * badge with that number. Returns null if the program is disabled/full, or if this user
+ * already holds the badge — the caller (evaluateBadges) only invokes this once per user
+ * per contribution-evaluation pass, so a wasted claimed slot on the 23505 path isn't a
+ * realistic concern here.
+ */
+export async function tryAwardFoundingScout(userId: string, xpEventId: string | null): Promise<UserBadge | null> {
+  const { data: sequenceNumber, error } = await supabaseAdmin().rpc("claim_founding_scout_slot");
+  if (error) throw new SupabaseQueryError(error);
+  if (sequenceNumber == null) return null;
+  return awardBadge(userId, "FOUNDING_SCOUT", "", xpEventId, sequenceNumber);
 }
 
 /** Bounded to a generous recency window rather than a full unbounded history — at this

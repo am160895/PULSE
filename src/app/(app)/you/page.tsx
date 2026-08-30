@@ -74,6 +74,7 @@ export default async function YouPage() {
     badges.filter((b) => b.badgeCode === "NEIGHBORHOOD_INSIDER" && b.neighborhood !== "").map((b) => b.neighborhood)
   );
   const globalBadgeCodes = (Object.keys(BADGE_CATALOG) as BadgeCode[]).filter((c) => c !== "NEIGHBORHOOD_INSIDER");
+  const foundingScoutSequence = badges.find((b) => b.badgeCode === "FOUNDING_SCOUT")?.sequenceNumber ?? null;
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-6 pb-10">
@@ -123,10 +124,14 @@ export default async function YouPage() {
               .filter((code) => badgesByCode.has(code))
               .map((code) => {
                 const def = BADGE_CATALOG[code];
+                const label =
+                  code === "FOUNDING_SCOUT" && foundingScoutSequence != null
+                    ? `Founding Scout #${String(foundingScoutSequence).padStart(3, "0")}`
+                    : def.name;
                 return (
                   <div key={code} className="flex flex-col items-center gap-1.5 text-center">
                     <BadgeMedallion motif={def.motif} size={52} unlocked />
-                    <span className="text-[11px] font-medium leading-tight">{def.name}</span>
+                    <span className="text-[11px] font-medium leading-tight">{label}</span>
                   </div>
                 );
               })}

@@ -3,10 +3,14 @@ import { redirect } from "next/navigation";
 import { ArrowRight, Radio, TrendingUp, Users } from "lucide-react";
 import { getCurrentSession } from "@/lib/auth";
 import { LandingMapBackground } from "@/components/LandingMapBackground";
+import { recordAnalyticsEvent } from "@/lib/data/analytics";
 
 export default async function LandingPage() {
   const session = await getCurrentSession();
   if (session) redirect("/map");
+
+  // Not awaited — a slow/failed analytics write must never delay the landing page itself.
+  void recordAnalyticsEvent({ event: "LANDING_VIEW" });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -36,11 +40,11 @@ export default async function LandingPage() {
               Tuesday.
             </p>
             <div className="flex gap-3 mb-12">
-              <Link href="/signup" className="btn btn-primary">
-                Explore NYC <ArrowRight size={16} />
+              <Link href="/map" className="btn btn-primary">
+                Explore NYC live <ArrowRight size={16} />
               </Link>
-              <Link href="/login" className="btn btn-secondary">
-                Log in
+              <Link href="/signup" className="btn btn-secondary">
+                Become a Founding Scout
               </Link>
             </div>
 

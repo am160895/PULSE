@@ -478,6 +478,13 @@ const PAGE_SIZE = 1000;
 // defense regardless of the exact mechanism.
 const MAX_CONCURRENT_PAGES = 5;
 
+// Above this many ids, a single .in("venue_id", venueIds) call's URL grows large enough
+// to fail outright rather than return a Postgres error — seen live once this app's venue
+// count crossed ~500 (a plain "fetch failed", since the request never reached PostgREST
+// at all). Every function below that scopes a query by an unbounded venueIds list chunks
+// through this rather than passing the full list to one .in() call.
+const MAX_IDS_PER_IN_CLAUSE = 200;
+
 /**
  * PostgREST caps a single response at a server-side max-rows limit (Supabase's default is
  * 1000) regardless of the query itself — a batched query spanning many venues can trivially
@@ -537,14 +544,35 @@ async function fetchAllRows(
   return all;
 }
 
+/** Composes fetchAllRows' row-count-verified pagination with MAX_IDS_PER_IN_CLAUSE
+ * chunking of the venueIds filter itself — needed because the two are independent axes
+ * (a batch can have too many RESULT rows, too many INPUT ids, or both) and fetchAllRows
+ * alone only guards the first. */
+async function fetchAllRowsForVenues(
+  venueIds: string[],
+  page: (
+    chunkIds: string[],
+    from: number,
+    to: number
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ) => PromiseLike<{ data: any; error: any; count?: number | null }>
+): Promise<Row[]> {
+  const all: Row[] = [];
+  for (let i = 0; i < venueIds.length; i += MAX_IDS_PER_IN_CLAUSE) {
+    const chunk = venueIds.slice(i, i + MAX_IDS_PER_IN_CLAUSE);
+    all.push(...(await fetchAllRows((from, to) => page(chunk, from, to))));
+  }
+  return all;
+}
+
 /** Batched sibling of listReportsForVenue — one round-trip for N venues instead of N.
  * Used by computeVenueStatesBatch (composeVenue.ts) for map/list views, where scoring every
  * visible venue with N separate per-venue queries each would multiply real network latency
  * by however many venues are on screen. */
 export async function listReportsForVenues(venueIds: string[]): Promise<Map<string, VenueReport[]>> {
   if (venueIds.length === 0) return new Map();
-  const rows = await fetchAllRows((from, to) =>
-    supabaseAdmin().from("venue_reports").select("*", { count: "exact" }).in("venue_id", venueIds).range(from, to)
+  const rows = await fetchAllRowsForVenues(venueIds, (chunk, from, to) =>
+    supabaseAdmin().from("venue_reports").select("*", { count: "exact" }).in("venue_id", chunk).range(from, to)
   );
   return groupBy(rows.map(rowToReport), (r) => r.venueId);
 }
@@ -656,8 +684,8 @@ export async function listBaselinesForVenues(venueIds: string[]): Promise<Map<st
   if (venueIds.length === 0) return new Map();
   // The one most likely to actually exceed PAGE_SIZE: up to 168 rows per venue (7 days x
   // 24 hours), so this hits 1000 rows at only ~6 venues in the batch.
-  const rows = await fetchAllRows((from, to) =>
-    supabaseAdmin().from("venue_hourly_baselines").select("*", { count: "exact" }).in("venue_id", venueIds).range(from, to)
+  const rows = await fetchAllRowsForVenues(venueIds, (chunk, from, to) =>
+    supabaseAdmin().from("venue_hourly_baselines").select("*", { count: "exact" }).in("venue_id", chunk).range(from, to)
   );
   return groupBy(rows.map(rowToBaseline), (b) => b.venueId);
 }
@@ -669,8 +697,8 @@ export async function listEventsForVenue(venueId: string): Promise<VenueEvent[]>
 
 export async function listEventsForVenues(venueIds: string[]): Promise<Map<string, VenueEvent[]>> {
   if (venueIds.length === 0) return new Map();
-  const rows = await fetchAllRows((from, to) =>
-    supabaseAdmin().from("venue_events").select("*", { count: "exact" }).in("venue_id", venueIds).range(from, to)
+  const rows = await fetchAllRowsForVenues(venueIds, (chunk, from, to) =>
+    supabaseAdmin().from("venue_events").select("*", { count: "exact" }).in("venue_id", chunk).range(from, to)
   );
   return groupBy(rows.map(rowToEvent), (e) => e.venueId);
 }
@@ -708,11 +736,11 @@ export async function listSpecialHoursForVenue(venueId: string, now: Date = new 
 export async function listSpecialHoursForVenues(venueIds: string[], now: Date = new Date()): Promise<Map<string, VenueSpecialHours[]>> {
   if (venueIds.length === 0) return new Map();
   const { from, to } = specialHoursDateWindow(now);
-  const rows = await fetchAllRows((rangeFrom, rangeTo) =>
+  const rows = await fetchAllRowsForVenues(venueIds, (chunk, rangeFrom, rangeTo) =>
     supabaseAdmin()
       .from("venue_special_hours")
       .select("*", { count: "exact" })
-      .in("venue_id", venueIds)
+      .in("venue_id", chunk)
       .gte("special_date", from)
       .lte("special_date", to)
       .range(rangeFrom, rangeTo)
@@ -736,11 +764,11 @@ export async function listSnapshotHistoryForVenues(
 ): Promise<Map<string, VenueSignalSnapshot[]>> {
   if (venueIds.length === 0) return new Map();
   const cutoff = new Date(Date.now() - sinceMinutesAgo * 60_000).toISOString();
-  const rows = await fetchAllRows((from, to) =>
+  const rows = await fetchAllRowsForVenues(venueIds, (chunk, from, to) =>
     supabaseAdmin()
       .from("venue_signal_snapshots")
       .select("*", { count: "exact" })
-      .in("venue_id", venueIds)
+      .in("venue_id", chunk)
       .gte("captured_at", cutoff)
       .range(from, to)
   );
@@ -795,16 +823,11 @@ export async function appendSnapshotsBatch(entries: Array<{ venueId: string; res
   );
 
   const cutoff = new Date(Date.now() - 12 * 3_600_000).toISOString();
-  unwrap(
-    await supabaseAdmin()
-      .from("venue_signal_snapshots")
-      .delete()
-      .in(
-        "venue_id",
-        entries.map((e) => e.venueId)
-      )
-      .lt("captured_at", cutoff)
-  );
+  const venueIds = entries.map((e) => e.venueId);
+  for (let i = 0; i < venueIds.length; i += MAX_IDS_PER_IN_CLAUSE) {
+    const chunk = venueIds.slice(i, i + MAX_IDS_PER_IN_CLAUSE);
+    unwrap(await supabaseAdmin().from("venue_signal_snapshots").delete().in("venue_id", chunk).lt("captured_at", cutoff));
+  }
 }
 
 // ---------------- historical rollups ----------------
@@ -832,11 +855,11 @@ export async function listRecentRollupsForVenue(venueId: string, now: Date = new
 export async function listRecentRollupsForVenues(venueIds: string[], now: Date = new Date()): Promise<Map<string, VenueNightlyRollup[]>> {
   if (venueIds.length === 0) return new Map();
   const cutoff = new Date(now.getTime() - ROLLUP_HISTORY_LOOKBACK_DAYS * 24 * 3_600_000).toISOString().slice(0, 10);
-  const rows = await fetchAllRows((from, to) =>
+  const rows = await fetchAllRowsForVenues(venueIds, (chunk, from, to) =>
     supabaseAdmin()
       .from("venue_nightly_rollups")
       .select("*", { count: "exact" })
-      .in("venue_id", venueIds)
+      .in("venue_id", chunk)
       .gte("nightlife_date", cutoff)
       .range(from, to)
   );
@@ -844,13 +867,19 @@ export async function listRecentRollupsForVenues(venueIds: string[], now: Date =
 }
 
 /** venue_ids that do NOT yet have a rollup row for `nightlifeDate` — the cheap check
- * that keeps finalizeNightlyRollupsIfNeeded's common case (nothing to do) to one query. */
+ * that keeps finalizeNightlyRollupsIfNeeded's common case (nothing to do) to one query
+ * (or a small handful, once chunked). */
 export async function getMissingRollupVenueIds(venueIds: string[], nightlifeDate: string): Promise<Set<string>> {
   if (venueIds.length === 0) return new Set();
-  const rows: Row[] = unwrap(
-    await supabaseAdmin().from("venue_nightly_rollups").select("venue_id").in("venue_id", venueIds).eq("nightlife_date", nightlifeDate)
-  );
-  const existing = new Set(rows.map((r) => r.venue_id));
+
+  const existing = new Set<string>();
+  for (let i = 0; i < venueIds.length; i += MAX_IDS_PER_IN_CLAUSE) {
+    const chunk = venueIds.slice(i, i + MAX_IDS_PER_IN_CLAUSE);
+    const rows: Row[] = unwrap(
+      await supabaseAdmin().from("venue_nightly_rollups").select("venue_id").in("venue_id", chunk).eq("nightlife_date", nightlifeDate)
+    );
+    for (const r of rows) existing.add(r.venue_id);
+  }
   return new Set(venueIds.filter((id) => !existing.has(id)));
 }
 

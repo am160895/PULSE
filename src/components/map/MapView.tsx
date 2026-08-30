@@ -21,7 +21,13 @@ interface MapViewProps {
 export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange, onUserLocation }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const markersRef = useRef<maplibregl.Marker[]>([]);
+  // Keyed by a stable id ("venue:<id>" / "cluster:<cluster_id>") so renderMarkers can
+  // reconcile in place — update position/class/text on an already-mounted marker — rather
+  // than tearing down and recreating every marker on every call. Recreating unconditionally
+  // used to make every marker replay its CSS mount animation (marker-in) on every poll
+  // refresh, pan, zoom, or selection change, which looked like the whole map "glitching" —
+  // markers popping/rescaling in place every few seconds instead of just updating quietly.
+  const markersMapRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const venuesRef = useRef(venues);
   const onSelectRef = useRef(onSelectVenue);
   const selectedVenueIdRef = useRef(selectedVenueId);
@@ -44,6 +50,7 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const markers = markersMapRef.current; // stable Map instance — captured for cleanup below
 
     // MapLibre GL's default worker loading relies on the bundler correctly resolving
     // an `import.meta.url`-relative worker chunk. Turbopack (as of Next 16.3) doesn't
@@ -99,9 +106,6 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
       const currentMap = mapRef.current;
       if (!currentMap) return;
 
-      for (const m of markersRef.current) m.remove();
-      markersRef.current = [];
-
       if (clusterIndexRef.current?.venues !== venuesRef.current) {
         const index = new Supercluster({ radius: 50, maxZoom: 17 }).load(
           venuesRef.current.map((v) => ({
@@ -118,14 +122,25 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
       const zoom = Math.floor(currentMap.getZoom());
       const clusters = index.getClusters([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], zoom);
 
+      const seenKeys = new Set<string>();
+
       for (const feature of clusters) {
         const [lng, lat] = feature.geometry.coordinates;
-        const props = feature.properties as { cluster?: boolean; point_count?: number; venueId?: string };
-
-        const el = document.createElement("div");
+        const props = feature.properties as { cluster?: boolean; cluster_id?: number; point_count?: number; venueId?: string };
 
         if (props.cluster) {
+          const key = `cluster:${props.cluster_id}`;
+          seenKeys.add(key);
+          const existing = markersMapRef.current.get(key);
+          if (existing) {
+            // A cluster's membership/count never changes for a given cluster_id within
+            // the same index — only its screen position can, on pan/zoom.
+            existing.setLngLat([lng, lat]);
+            continue;
+          }
+
           const size = Math.min(56, 32 + Math.log2(props.point_count ?? 2) * 6);
+          const el = document.createElement("div");
           el.className = "cluster-marker";
           el.style.width = `${size}px`;
           el.style.height = `${size}px`;
@@ -134,44 +149,82 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
           el.addEventListener("click", () => {
             currentMap.easeTo({ center: [lng, lat], zoom: Math.min(17, zoom + 2.5) });
           });
-        } else {
-          const venue = venuesRef.current.find((v) => v.id === props.venueId);
-          if (!venue) continue;
-          const isDirectory = venue.coverageState === "DIRECTORY";
-          // A closed venue must never look like it's showing a normal live score (spec
-          // §22/§27) — reuses the same plain-dot dim treatment as DIRECTORY rather than
-          // inventing a second de-emphasized visual language.
-          const isDeemphasized = isDirectory || venue.currentPulseStatus === "CLOSED";
-          const cls = isDeemphasized ? "directory" : markerClassForLabel(venue.pulse.pulseLabel);
-          const wrapper = document.createElement("div");
-          // inline-block, not the default block: MapLibre re-purposes this element AS its
-          // own `.maplibregl-marker` container rather than wrapping it in a new one, and a
-          // plain block-level div with no explicit width stretches to fill that marker
-          // container's containing block — the full map width. Harmless for the marker
-          // circle itself (it has its own fixed 44px size), but .pulse-ring's `inset: -6px`
-          // resolves against WRAPPER's size, not the circle's, so it rendered as a
-          // ~1000px-wide glowing oval across the bottom of the map instead of a small ring
-          // around one marker. inline-block shrink-wraps to the marker circle's actual
-          // size, which fixes both.
-          wrapper.style.position = "relative";
-          wrapper.style.display = "inline-block";
-          if (cls === "hot" || cls === "rising") {
-            const ring = document.createElement("div");
-            ring.className = `pulse-ring ${cls === "rising" ? "rising" : ""}`;
-            wrapper.appendChild(ring);
-          }
-          el.className = `venue-marker ${cls}${venue.id === selectedVenueIdRef.current ? " selected" : ""}`;
-          // A de-emphasized venue (no PULSE data at all, or currently closed) never shows
-          // a number here, even "–" — that would still look like a score.
-          el.textContent = isDeemphasized ? "" : venue.pulse.pulseScore > 0 ? String(venue.pulse.pulseScore) : "–";
-          wrapper.appendChild(el);
-          wrapper.addEventListener("click", () => onSelectRef.current(venue.id));
-
-          markersRef.current.push(new maplibregl.Marker({ element: wrapper }).setLngLat([lng, lat]).addTo(currentMap));
+          markersMapRef.current.set(key, new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(currentMap));
           continue;
         }
 
-        markersRef.current.push(new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(currentMap));
+        const venue = venuesRef.current.find((v) => v.id === props.venueId);
+        if (!venue) continue;
+        const key = `venue:${venue.id}`;
+        seenKeys.add(key);
+
+        const isDirectory = venue.coverageState === "DIRECTORY";
+        // A closed venue must never look like it's showing a normal live score (spec
+        // §22/§27) — reuses the same plain-dot dim treatment as DIRECTORY rather than
+        // inventing a second de-emphasized visual language.
+        const isDeemphasized = isDirectory || venue.currentPulseStatus === "CLOSED";
+        const cls = isDeemphasized ? "directory" : markerClassForLabel(venue.pulse.pulseLabel);
+        const isSelected = venue.id === selectedVenueIdRef.current;
+        // A de-emphasized venue (no PULSE data at all, or currently closed) never shows a
+        // number here, even "–" — that would still look like a score.
+        const scoreText = isDeemphasized ? "" : venue.pulse.pulseScore > 0 ? String(venue.pulse.pulseScore) : "–";
+        const showRing = cls === "hot" || cls === "rising";
+
+        const existing = markersMapRef.current.get(key);
+        if (existing) {
+          existing.setLngLat([lng, lat]);
+          const wrapper = existing.getElement();
+          const dot = wrapper.querySelector<HTMLDivElement>(".venue-marker");
+          if (dot) {
+            const nextClass = `venue-marker ${cls}${isSelected ? " selected" : ""}`;
+            if (dot.className !== nextClass) dot.className = nextClass;
+            if (dot.textContent !== scoreText) dot.textContent = scoreText;
+          }
+          const existingRing = wrapper.querySelector(".pulse-ring");
+          if (showRing && !existingRing) {
+            const ring = document.createElement("div");
+            ring.className = `pulse-ring ${cls === "rising" ? "rising" : ""}`;
+            wrapper.insertBefore(ring, wrapper.firstChild);
+          } else if (!showRing && existingRing) {
+            existingRing.remove();
+          } else if (showRing && existingRing) {
+            const nextRingClass = `pulse-ring ${cls === "rising" ? "rising" : ""}`;
+            if (existingRing.className !== nextRingClass) existingRing.className = nextRingClass;
+          }
+          continue;
+        }
+
+        const wrapper = document.createElement("div");
+        // inline-block, not the default block: MapLibre re-purposes this element AS its
+        // own `.maplibregl-marker` container rather than wrapping it in a new one, and a
+        // plain block-level div with no explicit width stretches to fill that marker
+        // container's containing block — the full map width. Harmless for the marker
+        // circle itself (it has its own fixed 44px size), but .pulse-ring's `inset: -6px`
+        // resolves against WRAPPER's size, not the circle's, so it rendered as a
+        // ~1000px-wide glowing oval across the bottom of the map instead of a small ring
+        // around one marker. inline-block shrink-wraps to the marker circle's actual
+        // size, which fixes both.
+        wrapper.style.position = "relative";
+        wrapper.style.display = "inline-block";
+        if (showRing) {
+          const ring = document.createElement("div");
+          ring.className = `pulse-ring ${cls === "rising" ? "rising" : ""}`;
+          wrapper.appendChild(ring);
+        }
+        const dot = document.createElement("div");
+        dot.className = `venue-marker ${cls}${isSelected ? " selected" : ""}`;
+        dot.textContent = scoreText;
+        wrapper.appendChild(dot);
+        wrapper.addEventListener("click", () => onSelectRef.current(venue.id));
+
+        markersMapRef.current.set(key, new maplibregl.Marker({ element: wrapper }).setLngLat([lng, lat]).addTo(currentMap));
+      }
+
+      for (const [key, marker] of markersMapRef.current) {
+        if (!seenKeys.has(key)) {
+          marker.remove();
+          markersMapRef.current.delete(key);
+        }
       }
     }
 
@@ -179,6 +232,7 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
       resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
+      markers.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

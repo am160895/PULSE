@@ -1,4 +1,4 @@
-import type { PulseLabel } from "@/types";
+import type { PulseLabel, TrendDirection } from "@/types";
 import { PULSE_LABEL_BANDS } from "@/config/constants";
 
 export function pulseLabelForScore(score: number): PulseLabel {
@@ -12,4 +12,12 @@ export const PULSE_LABEL_TEXT: Record<PulseLabel, string> = {
   MODERATE: "Moderate",
   QUIET: "Quiet",
   VERY_QUIET: "Very quiet",
+};
+
+export const TREND_TEXT: Record<TrendDirection, string> = {
+  RISING_FAST: "Rising fast",
+  RISING: "Rising",
+  STABLE: "Stable",
+  FALLING: "Falling",
+  FALLING_FAST: "Falling fast",
 };

@@ -30,6 +30,24 @@
   --quiet: #697386;
   --quiet-soft: rgba(105, 115, 134, 0.14);
 
+  /* Pulse intensity scale — venue markers, pulse-label badges, and score display ONLY.
+     Deliberately separate variables from --hot/--rising/--active/--quiet above, which are
+     also reused for unrelated badge semantics (confidence, open-state, claim status) that
+     must not shift color if this "how busy is it" gradient is ever retuned again. A single
+     ascending grey → tan → orange → deep-orange → red ramp reads as intensity at a glance,
+     rather than the old mixed categorical palette (green for "busy" doesn't read as more
+     intense than orange for "very active").*/
+  --level-quiet: #697386;
+  --level-quiet-soft: rgba(105, 115, 134, 0.14);
+  --level-moderate: #a68a63;
+  --level-moderate-soft: rgba(166, 138, 99, 0.16);
+  --level-busy: #ff9433;
+  --level-busy-soft: rgba(255, 148, 51, 0.16);
+  --level-very-active: #ff6a1f;
+  --level-very-active-soft: rgba(255, 106, 31, 0.16);
+  --level-hot: #ff3b3b;
+  --level-hot-soft: rgba(255, 59, 59, 0.16);
+
   --danger: #ff5c5c;
   --danger-soft: rgba(255, 92, 92, 0.14);
 
@@ -278,31 +296,37 @@ button {
   transform: scale(1.1);
 }
 
+/* HOT_NOW — top of the intensity scale. */
 .venue-marker.hot {
-  background: var(--hot);
+  background: var(--level-hot);
   color: white;
   border-color: transparent;
 }
 
+/* VERY_ACTIVE — deep orange, one step down from hot. */
 .venue-marker.rising {
-  background: var(--rising);
-  color: #111;
+  background: var(--level-very-active);
+  color: white;
   border-color: transparent;
 }
 
+/* BUSY — solid orange. */
 .venue-marker.active {
-  background: var(--active);
-  color: #07110b;
+  background: var(--level-busy);
+  color: #1a1000;
   border-color: transparent;
 }
 
+/* MODERATE — muted tan, the transitional step between grey and orange. */
 .venue-marker.moderate {
-  background: var(--surface-3);
-  color: var(--text);
+  background: var(--level-moderate);
+  color: #1a1410;
+  border-color: transparent;
 }
 
+/* QUIET — grey, matching the same closed/no-data treatment below. */
 .venue-marker.quiet {
-  background: var(--quiet);
+  background: var(--level-quiet);
   color: white;
   border-color: transparent;
 }
@@ -322,13 +346,13 @@ button {
   position: absolute;
   inset: -6px;
   border-radius: 999px;
-  border: 2px solid rgba(255, 77, 109, 0.45);
+  border: 2px solid rgba(255, 59, 59, 0.45);
   animation: pulse-ring 1.8s ease-out infinite;
   pointer-events: none;
 }
 
 .pulse-ring.rising {
-  border-color: rgba(255, 159, 67, 0.45);
+  border-color: rgba(255, 106, 31, 0.45);
 }
 
 @keyframes pulse-ring {
@@ -339,6 +363,27 @@ button {
   100% {
     transform: scale(1.35);
     opacity: 0;
+  }
+}
+
+/* Newly-added markers (every pan/zoom/data-refresh removes and re-creates the full marker
+   set — see MapView.tsx's renderMarkers()) fade and settle in instead of popping into
+   existence instantly, so panning/zooming and tapping a cluster to expand it both feel
+   like one continuous motion rather than a flicker of old markers vanishing and new ones
+   snapping in. */
+.venue-marker,
+.cluster-marker {
+  animation: marker-in 180ms ease-out;
+}
+
+@keyframes marker-in {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
@@ -376,10 +421,28 @@ button {
 /* ---------- Bottom sheet ---------- */
 
 .venue-sheet {
+  /* Every sheet using this class positions its own close button with `absolute top-*
+     right-*`, expecting to anchor to THIS card's corner. Without `relative` here, that
+     absolute positioning escaped to the nearest positioned ancestor instead — usually a
+     full-viewport-width `fixed` wrapper — landing the close button at the far edge of the
+     screen rather than the corner of this (narrower, centered) card. */
+  position: relative;
   background: var(--surface);
   border-top: 1px solid var(--border-strong);
   border-radius: 22px 22px 0 0;
   box-shadow: 0 -16px 50px rgba(0, 0, 0, 0.38);
+  animation: sheet-slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sheet-slide-up {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .sheet-handle {

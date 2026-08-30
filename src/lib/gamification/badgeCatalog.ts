@@ -58,6 +58,12 @@ export const BADGE_CATALOG: Record<BadgeCode, BadgeCatalogEntry> = {
     description: "Earned a neighborhood's contribution threshold.",
     motif: "location-signal",
   },
+  FOUNDING_SCOUT: {
+    code: "FOUNDING_SCOUT",
+    name: "Founding Scout",
+    description: "One of the first 100 people to make a real contribution to PULSE.",
+    motif: "founding-seal",
+  },
 };
 
 /** NEIGHBORHOOD_INSIDER is scoped per-neighborhood (spec §7's "West Village Scout" —

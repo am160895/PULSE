@@ -68,6 +68,15 @@ function LocationSignal() {
   );
 }
 
+function FoundingSeal() {
+  return (
+    <svg viewBox="0 0 24 24" width="55%" height="55%" fill="none" stroke="currentColor" strokeWidth={STROKE_WIDTH} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9.5" opacity="0.5" />
+      <path d="M12 6.5 13.4 10.2 17.2 10.4 14.2 12.9 15.3 16.6 12 14.4 8.7 16.6 9.8 12.9 6.8 10.4 10.6 10.2Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 const MOTIFS: Record<string, () => React.ReactElement> = {
   "radiating-dot": RadiatingDot,
   "rising-line": RisingLine,
@@ -75,6 +84,7 @@ const MOTIFS: Record<string, () => React.ReactElement> = {
   "abstract-moon": AbstractMoon,
   "concentric-pulse": ConcentricPulse,
   "location-signal": LocationSignal,
+  "founding-seal": FoundingSeal,
 };
 
 export function BadgeMedallion({ motif, size = 44, unlocked = true }: { motif: string; size?: number; unlocked?: boolean }) {

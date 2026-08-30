@@ -3,10 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, UserPlus, X } from "lucide-react";
+import { Check, Share2, UserPlus, X } from "lucide-react";
 import { useFriends } from "@/hooks/api";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
 import { requestJson } from "@/lib/http/requestJson";
+import { trackEvent } from "@/lib/analytics/track";
 
 export function FriendsView() {
   const { data, isLoading, isError, refetch } = useFriends();
@@ -15,6 +16,28 @@ export function FriendsView() {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
+  const [inviteLabel, setInviteLabel] = useState<string | null>(null);
+
+  // No referral/attribution tracking exists — this counts invite-shares initiated, not
+  // confirmed signups, and is labeled to the user accordingly (never overclaimed as "N
+  // friends joined").
+  async function handleInvite() {
+    const url = `${window.location.origin}/signup`;
+    const text = "Come see what's happening tonight — I'm on PULSE.";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "PULSE", text, url });
+        trackEvent("FRIEND_INVITED");
+        return;
+      } catch {
+        // user cancelled — fall through to clipboard
+      }
+    }
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    trackEvent("FRIEND_INVITED");
+    setInviteLabel("Copied");
+    setTimeout(() => setInviteLabel(null), 2000);
+  }
 
   function refresh() {
     queryClient.invalidateQueries({ queryKey: ["friends"] });
@@ -73,7 +96,12 @@ export function FriendsView() {
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-6 pb-10">
-      <h1 className="mb-1">Friends</h1>
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <h1>Friends</h1>
+        <button className="btn btn-secondary btn-sm shrink-0" onClick={handleInvite}>
+          <Share2 size={14} /> {inviteLabel ?? "Invite friends"}
+        </button>
+      </div>
       <p className="text-[13px] text-[var(--text-secondary)] mb-6">
         Presence is opt-in and expires automatically — see Settings &gt; Privacy to change what you share.
       </p>

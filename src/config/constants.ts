@@ -1,4 +1,4 @@
-import type { ContributorLevelName, VenueType, XpRewardType } from "@/types";
+import type { AnalyticsEventName, ContributorLevelName, VenueType, XpRewardType } from "@/types";
 
 export const MAP_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
@@ -190,3 +190,23 @@ export const BEST_BET_MIN_MINUTES_UNTIL_CLOSE = 60;
 // Sequential processing to respect Nominatim's 1 req/sec geocoding policy — this cap keeps
 // a single import request comfortably bounded even though there's no chunking/streaming.
 export const IMPORT_MAX_ROWS = 40;
+
+// ---- acquisition funnel analytics ----
+// Runtime-checkable mirror of the AnalyticsEventName union (and the analytics_event_name
+// Postgres enum in migration 0004) — needed as a plain array so the ingestion route can
+// validate against it with z.enum(...), which can't accept a type, only literal values.
+export const ANALYTICS_EVENT_NAMES = [
+  "LANDING_VIEW",
+  "MAP_VIEW",
+  "VENUE_VIEW",
+  "SHARED_LINK_OPENED",
+  "AUTH_STARTED",
+  "AUTH_COMPLETED",
+  "REPORT_STARTED",
+  "REPORT_COMPLETED",
+  "IM_HERE_COMPLETED",
+  "VENUE_SHARED",
+  "VENUE_SAVED",
+  "DIRECTIONS_CLICKED",
+  "FRIEND_INVITED",
+] as const satisfies readonly AnalyticsEventName[];

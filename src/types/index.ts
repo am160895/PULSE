@@ -348,7 +348,8 @@ export type BadgeCode =
   | "ON_THE_PULSE"
   | "CITY_SCOUT"
   | "EARLY_SIGNAL"
-  | "NEIGHBORHOOD_INSIDER";
+  | "NEIGHBORHOOD_INSIDER"
+  | "FOUNDING_SCOUT";
 
 export interface XpEvent {
   id: string;
@@ -389,7 +390,31 @@ export interface UserBadge {
   neighborhood: string; // "" for non-neighborhood-scoped badges
   awardedAt: string;
   xpEventId: string | null;
+  /** Only set for FOUNDING_SCOUT — the permanent #001-#100 this user was awarded, in
+   * order of first genuine contribution. Null for every other badge. */
+  sequenceNumber: number | null;
 }
+
+export interface FoundingScoutConfig {
+  enabled: boolean;
+  maxCount: number;
+  awardedCount: number;
+}
+
+export type AnalyticsEventName =
+  | "LANDING_VIEW"
+  | "MAP_VIEW"
+  | "VENUE_VIEW"
+  | "SHARED_LINK_OPENED"
+  | "AUTH_STARTED"
+  | "AUTH_COMPLETED"
+  | "REPORT_STARTED"
+  | "REPORT_COMPLETED"
+  | "IM_HERE_COMPLETED"
+  | "VENUE_SHARED"
+  | "VENUE_SAVED"
+  | "DIRECTIONS_CLICKED"
+  | "FRIEND_INVITED";
 
 /** A delayed-accuracy confirmation newly awarded THIS request — see
  * lib/gamification/consensus.ts. Surfaced by /api/venues and /api/venues/[id] so the
