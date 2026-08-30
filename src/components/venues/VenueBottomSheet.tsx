@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark, X } from "lucide-react";
+import { Bookmark, MapPin, X } from "lucide-react";
 import type { VenueWithPulse } from "@/types";
 import { OpenStateBadge, PulseLabelBadge, TrendIndicator, WaitBadge } from "@/components/venues/Badges";
 import { VsTypicalBadge } from "@/components/venues/VsTypicalBadge";
+import { ActivityGraph } from "@/components/venues/ActivityGraph";
+import { useVenueHistory } from "@/hooks/api";
 import { formatDistance } from "@/lib/geo";
 import { VENUE_TYPE_LABELS } from "@/config/constants";
 
@@ -18,10 +20,17 @@ export function VenueBottomSheet({ venue, onClose, onToggleSaved }: Props) {
   const isDirectory = venue.coverageState === "DIRECTORY";
   const isClosed = venue.currentPulseStatus === "CLOSED";
   const showScore = !isDirectory && !isClosed;
+  // Fetched here (rather than passed down) so the graph appears the moment a marker is
+  // tapped, without waiting on a navigation to the full venue page — same query key as
+  // that page, so React Query serves it from cache instantly on the rare tap-through.
+  const { data: history } = useVenueHistory(venue.id);
 
   return (
     <div className="fixed left-0 right-0 bottom-16 z-40 px-2 pb-2">
-      <div className="venue-sheet mx-auto max-w-xl">
+      <div
+        className="venue-sheet mx-auto max-w-xl"
+        style={{ maxHeight: "calc(100dvh - 140px)", overflowY: "auto" }}
+      >
         <div className="sheet-handle" />
         <button onClick={onClose} className="absolute top-3 right-3 text-[var(--text-muted)]" aria-label="Close">
           <X size={18} />
@@ -33,6 +42,9 @@ export function VenueBottomSheet({ venue, onClose, onToggleSaved }: Props) {
               <p className="text-[13px] text-[var(--text-secondary)]">
                 {venue.neighborhood} · {VENUE_TYPE_LABELS[venue.venueType]}
                 {venue.distanceMeters !== undefined ? ` · ${formatDistance(venue.distanceMeters)}` : ""}
+              </p>
+              <p className="text-[12.5px] text-[var(--text-muted)] mt-0.5 flex items-center gap-1">
+                <MapPin size={11} /> {venue.streetAddress}, {venue.city}
               </p>
             </div>
             {showScore && (
@@ -73,6 +85,12 @@ export function VenueBottomSheet({ venue, onClose, onToggleSaved }: Props) {
             <p className="text-[13px] mt-2" style={{ color: "var(--accent)" }}>
               {venue.friendsPresent.length} friend{venue.friendsPresent.length > 1 ? "s" : ""} here
             </p>
+          )}
+
+          {history && (
+            <div className="mt-3">
+              <ActivityGraph past={history.past} forecast={history.forecast} />
+            </div>
           )}
 
           <div className="flex gap-2 mt-4">

@@ -17,6 +17,7 @@
  *
  * Run with: npm run seed:irish
  */
+import { fileURLToPath } from "node:url";
 import { createVenueAdmin, listAllVenuesForAdmin } from "../src/lib/data/repository";
 import type { NewVenueHoursInput, NewVenueInput } from "../src/lib/data/repository";
 import { geocode } from "../src/lib/geo/nominatim";
@@ -41,7 +42,7 @@ interface SourceVenue {
   hours: NewVenueHoursInput[];
 }
 
-const VENUES: SourceVenue[] = [
+export const VENUES: SourceVenue[] = [
   {
     name: "The Blasket",
     neighborhood: "Midtown East",
@@ -576,7 +577,11 @@ async function main() {
   console.log(`\nDone. ${created} added, ${skipped} skipped (duplicates), ${noCoords} skipped (geocode failed).`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Guarded so importing VENUES from another script (see scripts/tagIrishBars.ts) doesn't
+// also re-run this whole batch import as an ES module side effect.
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

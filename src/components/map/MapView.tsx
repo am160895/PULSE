@@ -7,7 +7,7 @@ import Supercluster from "supercluster";
 import { Radio } from "lucide-react";
 import type { VenueWithPulse } from "@/types";
 import { MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, MAP_STYLE_URL } from "@/config/constants";
-import { markerClassForLabel } from "@/components/venues/Badges";
+import { mapMarkerClass } from "@/lib/venues/markerColor";
 import type { BoundsParams } from "@/hooks/api";
 import { getUserLocationOnce } from "@/lib/geo/userLocation";
 
@@ -179,17 +179,14 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
         const key = `venue:${venue.id}`;
         seenKeys.add(key);
 
-        const isDirectory = venue.coverageState === "DIRECTORY";
-        // A closed venue must never look like it's showing a normal live score (spec
-        // §22/§27) — reuses the same plain-dot dim treatment as DIRECTORY rather than
-        // inventing a second de-emphasized visual language.
-        const isDeemphasized = isDirectory || venue.currentPulseStatus === "CLOSED";
-        const cls = isDeemphasized ? "directory" : markerClassForLabel(venue.pulse.pulseLabel);
+        const cls = mapMarkerClass(venue);
         const isSelected = venue.id === selectedVenueIdRef.current;
-        // A de-emphasized venue (no PULSE data at all, or currently closed) never shows a
-        // number here, even "–" — that would still look like a score.
-        const scoreText = isDeemphasized ? "" : venue.pulse.pulseScore > 0 ? String(venue.pulse.pulseScore) : "–";
-        const showRing = cls === "hot" || cls === "rising";
+        // No live PULSE data at all (even though the marker still earns an honest open/
+        // closed color, see mapMarkerClass) or genuinely closed — either way, never show a
+        // number here, even "–", since that would still look like a fabricated live score.
+        const hideScore = venue.coverageState === "DIRECTORY" || venue.currentPulseStatus === "CLOSED";
+        const scoreText = hideScore ? "" : venue.pulse.pulseScore > 0 ? String(venue.pulse.pulseScore) : "–";
+        const showRing = cls === "hot";
 
         const existing = markersMapRef.current.get(key);
         if (existing) {
@@ -204,13 +201,10 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
           const existingRing = wrapper.querySelector(".pulse-ring");
           if (showRing && !existingRing) {
             const ring = document.createElement("div");
-            ring.className = `pulse-ring ${cls === "rising" ? "rising" : ""}`;
+            ring.className = "pulse-ring";
             wrapper.insertBefore(ring, wrapper.firstChild);
           } else if (!showRing && existingRing) {
             existingRing.remove();
-          } else if (showRing && existingRing) {
-            const nextRingClass = `pulse-ring ${cls === "rising" ? "rising" : ""}`;
-            if (existingRing.className !== nextRingClass) existingRing.className = nextRingClass;
           }
           continue;
         }
@@ -229,7 +223,7 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
         wrapper.style.display = "inline-block";
         if (showRing) {
           const ring = document.createElement("div");
-          ring.className = `pulse-ring ${cls === "rising" ? "rising" : ""}`;
+          ring.className = "pulse-ring";
           wrapper.appendChild(ring);
         }
         const dot = document.createElement("div");

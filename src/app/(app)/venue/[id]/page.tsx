@@ -400,14 +400,17 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
               </ul>
             </details>
           </section>
-
-          {history && (
-            <section className="mb-5">
-              <SectionTitle title="Activity" />
-              <ActivityGraph past={history.past} forecast={history.forecast} />
-            </section>
-          )}
         </>
+      )}
+
+      {/* Typical is a pure historical-baseline curve, computed independent of whether this
+          venue has any live pulse right now — shown for every venue regardless of
+          open/closed/directory state, not just the ones with an active score above. */}
+      {history && (
+        <section className="mb-5">
+          <SectionTitle title="Activity" />
+          <ActivityGraph past={history.past} forecast={history.forecast} />
+        </section>
       )}
 
       {/* Always visible, never gated behind a tap — every venue's hours must be legible

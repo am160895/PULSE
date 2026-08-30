@@ -18,6 +18,8 @@
     "dedupe:venues": "tsx --env-file=.env.local scripts/dedupeVenues.ts",
     "backfill:hours": "tsx --env-file=.env.local scripts/backfillTypicalHours.ts",
     "fix:hours-timestamp": "tsx --env-file=.env.local scripts/fixBackfilledHoursTimestamp.ts",
+    "tag:irish": "tsx --env-file=.env.local scripts/tagIrishBars.ts",
+    "audit:geo": "tsx --env-file=.env.local scripts/auditVenueGeocoding.ts",
     "test": "vitest run"
   },
   "dependencies": {

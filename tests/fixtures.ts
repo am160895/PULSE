@@ -1,4 +1,4 @@
-import type { UserNeighborhoodProgress, Venue, VenueHours, VenueReport, VenueSpecialHours, XpEvent } from "@/types";
+import type { UserNeighborhoodProgress, Venue, VenueHours, VenueReport, VenueSpecialHours, VenueWithPulse, XpEvent } from "@/types";
 
 export function makeHours(overrides: Partial<VenueHours> = {}): VenueHours {
   return {
@@ -62,6 +62,41 @@ export function makeVenue(overrides: Partial<Venue> = {}): Venue {
     claimStatus: "UNCLAIMED",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+export function makeVenueWithPulse(overrides: Partial<VenueWithPulse> = {}): VenueWithPulse {
+  const now = new Date();
+  return {
+    ...makeVenue(overrides),
+    pulse: {
+      pulseScore: 75,
+      pulseLabel: "BUSY",
+      confidenceScore: 80,
+      confidenceLabel: "HIGH",
+      freshness: "LIVE",
+      trend: "STABLE",
+      trendDeltaLast30Min: 0,
+      expectedPeak: null,
+      waitEstimate: null,
+      components: [],
+      explanation: "",
+    },
+    openState: "OPEN",
+    coverageState: "LIVE",
+    openStatus: {
+      isOpen: true,
+      status: "OPEN",
+      closesAt: new Date(now.getTime() + 120 * 60_000).toISOString(),
+      opensAt: null,
+      nextOpenAt: null,
+      hoursConfidence: "HIGH",
+      displayText: "Open",
+    },
+    currentPulseStatus: "LIVE",
+    hoursDiscrepancy: false,
+    vsTypical: null,
     ...overrides,
   };
 }
