@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import Supercluster from "supercluster";
+import { Radio } from "lucide-react";
 import type { VenueWithPulse } from "@/types";
 import { MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, MAP_STYLE_URL } from "@/config/constants";
 import { markerClassForLabel } from "@/components/venues/Badges";
@@ -21,6 +22,12 @@ interface MapViewProps {
 export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange, onUserLocation }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  // Base map tiles come from an external CDN and MapLibre's own init/worker sequence adds
+  // more delay on top — on a slow connection (or this dev sandbox) that can be several
+  // seconds of a flat black screen with zero feedback, which reads as "broken," not
+  // "loading." True until the style's tiles have actually painted (MapLibre's own "load"
+  // event, not just the map object existing).
+  const [isMapReady, setIsMapReady] = useState(false);
   // Keyed by a stable id ("venue:<id>" / "cluster:<cluster_id>") so renderMarkers can
   // reconcile in place — update position/class/text on an already-mounted marker — rather
   // than tearing down and recreating every marker on every call. Recreating unconditionally
@@ -75,7 +82,10 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
       renderMarkers();
     };
 
-    map.on("load", emitBounds);
+    map.on("load", () => {
+      emitBounds();
+      setIsMapReady(true);
+    });
     map.on("moveend", emitBounds);
     renderMarkersRef.current = renderMarkers;
 
@@ -251,10 +261,20 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
   // position:absolute) and making the map think it needs zero tiles for the viewport.
   // Inline styles always win over class-based rules regardless of load order.
   return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0"
-      style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        className="absolute inset-0"
+        style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
+      />
+      {!isMapReady && (
+        <div className="map-loading-overlay" aria-hidden="true">
+          <span className="map-loading-mark">
+            <Radio size={26} color="white" />
+          </span>
+          <span className="map-loading-wordmark">PULSE</span>
+        </div>
+      )}
+    </>
   );
 }
