@@ -20,9 +20,6 @@ export async function GET(request: NextRequest) {
   const west = searchParams.get("west");
   const userLat = searchParams.get("lat");
   const userLng = searchParams.get("lng");
-  // NOW (default) hides pure directory listings with zero PULSE data; ALL shows every known
-  // venue. Search always searches everything regardless of this toggle (set below).
-  const coverageMode = searchParams.get("coverage") === "ALL" ? "ALL" : "NOW";
 
   const venues = q
     ? [...(await searchVenues(q)), ...(await searchExternalDirectoryVenues(q))]
@@ -41,7 +38,7 @@ export async function GET(request: NextRequest) {
   const newlyConfirmedSignals = [...states.values()].flatMap((s) => s.newlyConfirmedSignals);
   const newlyUnlockedBadges = [...states.values()].flatMap((s) => s.newlyUnlockedBadges);
 
-  let results: VenueWithPulse[] = venues.map((venue) => {
+  const results: VenueWithPulse[] = venues.map((venue) => {
     const { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, vsTypical } = states.get(venue.id)!;
     const friendsPresent = visiblePresence.filter((p) => p.venueId === venue.id);
     return {
@@ -58,12 +55,6 @@ export async function GET(request: NextRequest) {
       distanceMeters: userLocation ? haversineDistanceMeters(userLocation, { lat: venue.latitude, lng: venue.longitude }) : undefined,
     };
   });
-
-  // Search always searches everything, even in NOW mode — you should always be able to
-  // find a specific place by name, even if it has no live PULSE data yet.
-  if (!q && coverageMode === "NOW") {
-    results = results.filter((v) => v.coverageState !== "DIRECTORY");
-  }
 
   return NextResponse.json({ venues: results, newlyConfirmedSignals, newlyUnlockedBadges });
 }

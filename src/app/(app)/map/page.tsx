@@ -6,7 +6,7 @@ import { MapSearchAndFilters, type MapFilter } from "@/components/map/MapSearchA
 import { VenueBottomSheet } from "@/components/venues/VenueBottomSheet";
 import { BestBetStrip } from "@/components/map/BestBetStrip";
 import { OnboardingBanner } from "@/components/map/OnboardingBanner";
-import { useInvalidateVenue, useVenueSearch, useVenuesInBounds, type BoundsParams, type CoverageMode } from "@/hooks/api";
+import { useInvalidateVenue, useVenueSearch, useVenuesInBounds, type BoundsParams } from "@/hooks/api";
 import { requestJson } from "@/lib/http/requestJson";
 import { isBestBetVenue } from "@/lib/pulse/explore";
 import { trackEvent } from "@/lib/analytics/track";
@@ -19,10 +19,9 @@ export default function MapPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeFilters, setActiveFilters] = useState<Set<MapFilter>>(new Set());
-  const [coverage, setCoverage] = useState<CoverageMode>("NOW");
   const invalidate = useInvalidateVenue();
 
-  const { data: boundsVenues } = useVenuesInBounds(bounds, userLocation, coverage);
+  const { data: boundsVenues } = useVenuesInBounds(bounds, userLocation);
   const { data: searchVenues } = useVenueSearch(query);
 
   function isClosedState(v: { openState: string }) {
@@ -113,14 +112,7 @@ export default function MapPage() {
         onBoundsChange={setBounds}
         onUserLocation={setUserLocation}
       />
-      <MapSearchAndFilters
-        query={query}
-        onQueryChange={setQuery}
-        active={activeFilters}
-        onToggle={toggleFilter}
-        coverage={coverage}
-        onCoverageChange={setCoverage}
-      />
+      <MapSearchAndFilters query={query} onQueryChange={setQuery} active={activeFilters} onToggle={toggleFilter} />
       <OnboardingBanner />
       {showNothingOpenState && (
         <div className="fixed left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 px-6 text-center">

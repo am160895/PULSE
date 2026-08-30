@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
-import type { CoverageMode } from "@/hooks/api";
 
 export type MapFilter =
   | "HOT"
@@ -41,11 +40,9 @@ interface Props {
   onQueryChange: (q: string) => void;
   active: Set<MapFilter>;
   onToggle: (f: MapFilter) => void;
-  coverage: CoverageMode;
-  onCoverageChange: (c: CoverageMode) => void;
 }
 
-export function MapSearchAndFilters({ query, onQueryChange, active, onToggle, coverage, onCoverageChange }: Props) {
+export function MapSearchAndFilters({ query, onQueryChange, active, onToggle }: Props) {
   const [showMore, setShowMore] = useState(false);
   const activeSecondaryCount = SECONDARY_FILTERS.filter((f) => active.has(f.key)).length;
 
@@ -67,24 +64,6 @@ export function MapSearchAndFilters({ query, onQueryChange, active, onToggle, co
       </div>
 
       <div className="filter-row" style={{ top: "calc(env(safe-area-inset-top) + 66px)" }}>
-        <div className="flex rounded-full p-0.5 shrink-0" style={{ background: "rgba(17,21,26,0.94)", border: "1px solid var(--border)" }}>
-          {(["NOW", "ALL"] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => onCoverageChange(mode)}
-              aria-pressed={coverage === mode}
-              className="filter-chip"
-              style={{
-                border: "none",
-                background: coverage === mode ? "var(--text)" : "transparent",
-                color: coverage === mode ? "var(--bg)" : "var(--text-secondary)",
-              }}
-            >
-              {mode === "NOW" ? "Now" : "All places"}
-            </button>
-          ))}
-        </div>
-
         {PRIMARY_FILTERS.map((f) => (
           <button
             key={f.key}

@@ -18,15 +18,9 @@ export interface BoundsParams {
   west: number;
 }
 
-export type CoverageMode = "NOW" | "ALL";
-
-export function useVenuesInBounds(
-  bounds: BoundsParams | null,
-  userLocation: { lat: number; lng: number } | null,
-  coverage: CoverageMode = "NOW"
-) {
+export function useVenuesInBounds(bounds: BoundsParams | null, userLocation: { lat: number; lng: number } | null) {
   return useQuery({
-    queryKey: ["venues", bounds, userLocation, coverage],
+    queryKey: ["venues", bounds, userLocation],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (bounds) {
@@ -39,7 +33,6 @@ export function useVenuesInBounds(
         params.set("lat", String(userLocation.lat));
         params.set("lng", String(userLocation.lng));
       }
-      params.set("coverage", coverage);
       const data = await fetchJson<{ venues: VenueWithPulse[] }>(`/api/venues?${params}`);
       return data.venues;
     },
