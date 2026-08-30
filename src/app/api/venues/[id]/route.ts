@@ -4,6 +4,7 @@ import { getCurrentSession } from "@/lib/auth";
 import { getVenueById, listSavedVenueIds, listVenues } from "@/lib/data/repository";
 import { listVisiblePresenceForViewer } from "@/lib/data/social";
 import { computeVenueStatesBatch } from "@/lib/pulse/composeVenue";
+import { calculateMoveScore } from "@/lib/pulse/moveScore";
 import { haversineDistanceMeters } from "@/lib/geo";
 import { getOwnershipRequest } from "@/lib/data/ownership";
 
@@ -48,6 +49,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const result: VenueWithPulse = {
     ...venue,
     pulse,
+    move: calculateMoveScore({ pulseScore: pulse.pulseScore, confidenceScore: pulse.confidenceScore, trend: pulse.trend, waitEstimate: pulse.waitEstimate, currentPulseStatus }),
     openState,
     coverageState,
     openStatus,
@@ -64,6 +66,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       return {
         ...v,
         pulse: alt.pulse,
+        move: calculateMoveScore({
+          pulseScore: alt.pulse.pulseScore,
+          confidenceScore: alt.pulse.confidenceScore,
+          trend: alt.pulse.trend,
+          waitEstimate: alt.pulse.waitEstimate,
+          currentPulseStatus: alt.currentPulseStatus,
+          distanceMeters: distance,
+        }),
         openState: alt.openState,
         coverageState: alt.coverageState,
         openStatus: alt.openStatus,

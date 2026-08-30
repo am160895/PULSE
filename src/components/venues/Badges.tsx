@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowDownRight, ArrowUp, ArrowUpRight, Minus } from "lucide-react";
-import type { ConfidenceLabel, FreshnessLabel, PulseLabel, TrendDirection, VenueOpenState, VenueOpenStatus, WaitEstimate } from "@/types";
+import type { ConfidenceLabel, FreshnessLabel, MoveResult, PulseLabel, TrendDirection, VenueOpenState, VenueOpenStatus, WaitEstimate } from "@/types";
 import { PULSE_LABEL_TEXT, TREND_TEXT } from "@/lib/pulse/labels";
+import { MOVE_VERDICT_TEXT } from "@/lib/pulse/moveScore";
 import { formatWaitEstimate } from "@/lib/pulse/waitEstimate";
 import { VENUE_OPEN_STATE_TEXT } from "@/lib/venues/openState";
 
@@ -35,6 +36,26 @@ export function PulseLabelBadge({ label }: { label: PulseLabel }) {
   return (
     <span className="badge" style={{ background: s.bg, color: s.color }}>
       {PULSE_LABEL_TEXT[label]}
+    </span>
+  );
+}
+
+const MOVE_VERDICT_STYLES: Record<MoveResult["verdict"], { bg: string; color: string }> = {
+  GOOD_MOVE: { bg: "var(--active-soft)", color: "var(--active)" },
+  PEAKING: { bg: "var(--accent-soft)", color: "var(--accent)" },
+  COOLING: { bg: "var(--quiet-soft)", color: "var(--quiet)" },
+  HIGH_LINE_RISK: { bg: "var(--rising-soft)", color: "var(--rising)" },
+  TOO_EARLY: { bg: "var(--quiet-soft)", color: "var(--quiet)" },
+  NOT_WORTH_TRIP: { bg: "var(--danger-soft)", color: "var(--danger)" },
+};
+
+/** "Should we go there" — distinct from PulseLabelBadge's "what's happening there."
+ * Absent entirely (never rendered) when move is null, i.e. the venue is CLOSED. */
+export function MoveBadge({ move }: { move: MoveResult }) {
+  const s = MOVE_VERDICT_STYLES[move.verdict];
+  return (
+    <span className="badge" style={{ background: s.bg, color: s.color }}>
+      MOVE {move.moveScore} · {MOVE_VERDICT_TEXT[move.verdict]}
     </span>
   );
 }

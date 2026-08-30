@@ -112,6 +112,26 @@ export interface FriendsResponse {
   presence: { profileId: string; displayName: string; status: string; venueId: string | null; venueName: string | null; startedAt: string }[];
 }
 
+export interface DecideResponse {
+  bestMove: VenueWithPulse | null;
+  moreEnergy: VenueWithPulse | null;
+  lessWait: VenueWithPulse | null;
+}
+
+export function useDecide(userLocation: { lat: number; lng: number } | null) {
+  return useQuery({
+    queryKey: ["decide", userLocation],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (userLocation) {
+        params.set("lat", String(userLocation.lat));
+        params.set("lng", String(userLocation.lng));
+      }
+      return fetchJson<DecideResponse>(`/api/decide?${params}`);
+    },
+  });
+}
+
 export function useSavedVenues() {
   return useQuery({
     queryKey: ["saved"],

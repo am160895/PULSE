@@ -6,8 +6,9 @@ import { listSavedVenueIds, listVenues } from "@/lib/data/repository";
 import { listVisiblePresenceForViewer } from "@/lib/data/social";
 import { computeVenueStatesBatch } from "@/lib/pulse/composeVenue";
 import { calculateMoveScore } from "@/lib/pulse/moveScore";
-import { buildExploreSections } from "@/lib/pulse/explore";
+import { pickDecision } from "@/lib/pulse/decide";
 import { haversineDistanceMeters } from "@/lib/geo";
+import { BEST_BET_MAX_DISTANCE_METERS } from "@/config/constants";
 
 export async function GET(request: NextRequest) {
   const session = await getCurrentSession();
@@ -19,14 +20,21 @@ export async function GET(request: NextRequest) {
   const userLocation = lat && lng ? { lat: Number(lat), lng: Number(lng) } : null;
 
   const now = new Date();
-  const [allVenues, savedIds, visiblePresence] = await Promise.all([
-    listVenues(),
+  const allVenues = await listVenues();
+
+  // Cheap prefilter before the batch score, same reasoning as the alternatives cap on
+  // /api/venues/[id] — no point Move-scoring a venue so far away it would never win anyway.
+  const candidates = userLocation
+    ? allVenues.filter((v) => haversineDistanceMeters(userLocation, { lat: v.latitude, lng: v.longitude }) <= BEST_BET_MAX_DISTANCE_METERS)
+    : allVenues;
+
+  const [states, savedIds, visiblePresence] = await Promise.all([
+    computeVenueStatesBatch(candidates, now, session.profile.id),
     listSavedVenueIds(session.profile.id),
     listVisiblePresenceForViewer(session.profile.id, now),
   ]);
-  const states = await computeVenueStatesBatch(allVenues, now, session.profile.id);
 
-  const venues: VenueWithPulse[] = allVenues.map((venue) => {
+  const venues: VenueWithPulse[] = candidates.map((venue) => {
     const state = states.get(venue.id)!;
     const distanceMeters = userLocation ? haversineDistanceMeters(userLocation, { lat: venue.latitude, lng: venue.longitude }) : undefined;
     return {
@@ -52,5 +60,5 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  return NextResponse.json({ sections: buildExploreSections(venues, now) });
+  return NextResponse.json(pickDecision(venues));
 }

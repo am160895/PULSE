@@ -189,6 +189,46 @@ export const BEST_BET_MIN_SCORE = 60;
 export const BEST_BET_MAX_DISTANCE_METERS = 3000;
 export const BEST_BET_MIN_MINUTES_UNTIL_CLOSE = 60;
 
+// ---- Move Score: "should we go there," not just "what's happening there" ----
+// Pulse Score answers the first question; Move Score answers the second by folding in
+// momentum, wait, distance, and how much to trust the reading at all. See
+// src/lib/pulse/moveScore.ts.
+export const MOVE_TREND_ADJUSTMENT = {
+  RISING_FAST: 12,
+  RISING: 6,
+  STABLE: 0,
+  FALLING: -10,
+  FALLING_FAST: -20,
+} as const;
+
+// Keyed by WaitEstimate.minMinutes — a long line undercuts an otherwise-great score.
+export const MOVE_WAIT_PENALTY_BANDS = [
+  { minMinutes: 30, penalty: 35 },
+  { minMinutes: 15, penalty: 22 },
+  { minMinutes: 5, penalty: 10 },
+] as const;
+
+// Distance only starts costing points past this radius, then scales gently — a few extra
+// minutes' walk shouldn't tank an otherwise-excellent move the way a long line does.
+export const MOVE_DISTANCE_FREE_METERS = 500;
+export const MOVE_DISTANCE_PENALTY_PER_METER = 1 / 150;
+export const MOVE_DISTANCE_MAX_PENALTY = 20;
+
+// How long a line has to be before it overrides everything else and reads as its own
+// verdict, regardless of how good the score is otherwise.
+export const MOVE_HIGH_LINE_RISK_MINUTES = 20;
+export const MOVE_NOT_WORTH_TRIP_MAX_SCORE = 35;
+export const MOVE_COOLING_MIN_PULSE_SCORE = 55;
+export const MOVE_TOO_EARLY_MAX_PULSE_SCORE = 45;
+export const MOVE_PEAKING_MIN_SCORE = 82;
+
+// ---- Decide: "where should we go tonight" — Best Move plus at most two alternates ----
+// Reuses Best Bet's distance radius as the candidate pool boundary — no point Move-scoring
+// a venue so far away it would never win anyway.
+export const DECIDE_MAX_CANDIDATES = 8;
+export const DECIDE_ENERGY_ALT_MIN_SCORE_DELTA = 8;
+export const DECIDE_WAIT_ALT_MIN_MINUTES_SAVED = 8;
+
 // ---- admin bulk venue import ----
 // Sequential processing to respect Nominatim's 1 req/sec geocoding policy — this cap keeps
 // a single import request comfortably bounded even though there's no chunking/streaming.

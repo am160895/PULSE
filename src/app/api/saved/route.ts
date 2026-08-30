@@ -3,6 +3,7 @@ import type { VenueWithPulse } from "@/types";
 import { getCurrentSession } from "@/lib/auth";
 import { getVenuesByIds, listSavedVenueIds } from "@/lib/data/repository";
 import { computeVenueStatesBatch } from "@/lib/pulse/composeVenue";
+import { calculateMoveScore } from "@/lib/pulse/moveScore";
 
 export async function GET() {
   const session = await getCurrentSession();
@@ -17,6 +18,13 @@ export async function GET() {
     return {
       ...venue,
       pulse: state.pulse,
+      move: calculateMoveScore({
+        pulseScore: state.pulse.pulseScore,
+        confidenceScore: state.pulse.confidenceScore,
+        trend: state.pulse.trend,
+        waitEstimate: state.pulse.waitEstimate,
+        currentPulseStatus: state.currentPulseStatus,
+      }),
       openState: state.openState,
       coverageState: state.coverageState,
       openStatus: state.openStatus,

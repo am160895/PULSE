@@ -83,6 +83,7 @@ export function makeVenueWithPulse(overrides: Partial<VenueWithPulse> = {}): Ven
       components: [],
       explanation: "",
     },
+    move: { moveScore: 65, verdict: "GOOD_MOVE" },
     openState: "OPEN",
     coverageState: "LIVE",
     openStatus: {

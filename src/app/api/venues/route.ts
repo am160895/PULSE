@@ -5,6 +5,7 @@ import { getCurrentSession } from "@/lib/auth";
 import { listSavedVenueIds, listVenues, listVenuesInBounds, searchVenues } from "@/lib/data/repository";
 import { listVisiblePresenceForViewer } from "@/lib/data/social";
 import { computeVenueStatesBatch } from "@/lib/pulse/composeVenue";
+import { calculateMoveScore } from "@/lib/pulse/moveScore";
 import { haversineDistanceMeters } from "@/lib/geo";
 import { searchExternalDirectoryVenues } from "@/lib/venues/searchExternal";
 
@@ -41,9 +42,11 @@ export async function GET(request: NextRequest) {
   const results: VenueWithPulse[] = venues.map((venue) => {
     const { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, vsTypical } = states.get(venue.id)!;
     const friendsPresent = visiblePresence.filter((p) => p.venueId === venue.id);
+    const distanceMeters = userLocation ? haversineDistanceMeters(userLocation, { lat: venue.latitude, lng: venue.longitude }) : undefined;
     return {
       ...venue,
       pulse,
+      move: calculateMoveScore({ pulseScore: pulse.pulseScore, confidenceScore: pulse.confidenceScore, trend: pulse.trend, waitEstimate: pulse.waitEstimate, currentPulseStatus, distanceMeters }),
       openState,
       coverageState,
       openStatus,
@@ -52,7 +55,7 @@ export async function GET(request: NextRequest) {
       vsTypical,
       isSaved: savedIds.has(venue.id),
       friendsPresent,
-      distanceMeters: userLocation ? haversineDistanceMeters(userLocation, { lat: venue.latitude, lng: venue.longitude }) : undefined,
+      distanceMeters,
     };
   });
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Bookmark, MapPin, X } from "lucide-react";
 import type { VenueWithPulse } from "@/types";
-import { OpenStateBadge, PulseLabelBadge, TrendIndicator, WaitBadge } from "@/components/venues/Badges";
+import { MoveBadge, OpenStateBadge, PulseLabelBadge, TrendIndicator, WaitBadge } from "@/components/venues/Badges";
 import { VsTypicalBadge } from "@/components/venues/VsTypicalBadge";
 import { ActivityGraph } from "@/components/venues/ActivityGraph";
 import { useVenueHistory } from "@/hooks/api";
@@ -68,6 +68,10 @@ export function VenueBottomSheet({ venue, onClose, onToggleSaved }: Props) {
                 {venue.vsTypical && <VsTypicalBadge comparison={venue.vsTypical} />}
               </>
             )}
+            {/* Shown even for a DIRECTORY venue — Move already tolerates a baseline-only
+                reading, same as the Typical line in the graph below. Absent only when
+                CLOSED, when calculateMoveScore itself returns null. */}
+            {venue.move && <MoveBadge move={venue.move} />}
           </div>
 
           {isDirectory ? (

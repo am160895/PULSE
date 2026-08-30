@@ -457,8 +457,20 @@ export interface PulseResult {
   explanation: string;
 }
 
+/** "Should we go there," distinct from pulseScore's "what's happening there" — folds in
+ * momentum, wait, distance, and confidence. See lib/pulse/moveScore.ts. */
+export type MoveVerdict = "GOOD_MOVE" | "PEAKING" | "COOLING" | "HIGH_LINE_RISK" | "TOO_EARLY" | "NOT_WORTH_TRIP";
+
+export interface MoveResult {
+  moveScore: number;
+  verdict: MoveVerdict;
+}
+
 export interface VenueWithPulse extends Venue {
   pulse: PulseResult;
+  /** null only when the venue is CLOSED — there's no "should we go" question to answer
+   * for a place that isn't open. See lib/pulse/moveScore.ts. */
+  move: MoveResult | null;
   /** Independent of pulse — see lib/venues/openState.ts. A closed venue can't be "hot." */
   openState: VenueOpenState;
   /** LIVE/RECENT/TYPICAL come from pulse.freshness; DIRECTORY means no PULSE data exists

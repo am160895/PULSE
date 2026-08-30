@@ -8,6 +8,7 @@ import { useInvalidateVenue, useVenue, useVenueHistory } from "@/hooks/api";
 import {
   ClosedVenueStatus,
   FreshnessBadge,
+  MoveBadge,
   OpenStateBadge,
   PulseLabelBadge,
   PulseScoreDisplay,
@@ -356,6 +357,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <OpenStateBadge state={venue.openState} />
             <span className="badge badge-low">No live PULSE yet</span>
+            {venue.move && <MoveBadge move={venue.move} />}
           </div>
           <p className="text-[14px] text-[var(--text-secondary)]">
             This is a real, known venue — nobody&apos;s reported here yet. Be the first to say how it is tonight.
@@ -369,6 +371,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
             <PulseScoreDisplay score={pulse.pulseScore} label={pulse.pulseLabel} />
             <div className="flex flex-col gap-1.5">
               <PulseLabelBadge label={pulse.pulseLabel} />
+              {venue.move && <MoveBadge move={venue.move} />}
               {venue.vsTypical && <VsTypicalBadge comparison={venue.vsTypical} />}
             </div>
           </div>
