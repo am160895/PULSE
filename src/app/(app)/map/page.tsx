@@ -107,6 +107,7 @@ export default function MapPage() {
     <div className="fixed inset-0">
       <MapView
         venues={venues}
+        isDataLoading={boundsVenues === undefined}
         selectedVenueId={selectedId}
         onSelectVenue={setSelectedId}
         onBoundsChange={setBounds}

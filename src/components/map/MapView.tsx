@@ -13,13 +13,19 @@ import { getUserLocationOnce } from "@/lib/geo/userLocation";
 
 interface MapViewProps {
   venues: VenueWithPulse[];
+  /** True while the first venues fetch for the current viewport is still in flight — kept
+   * separate from `isMapReady` so the loading overlay covers BOTH "tiles not painted yet"
+   * and "circles haven't arrived yet," instead of revealing an empty-looking map first and
+   * having markers visibly pop in a beat later. Only gates the very first load: a `false`
+   * value latches internally so later background refreshes never re-trigger the overlay. */
+  isDataLoading: boolean;
   selectedVenueId: string | null;
   onSelectVenue: (venueId: string) => void;
   onBoundsChange: (bounds: BoundsParams) => void;
   onUserLocation?: (loc: { lat: number; lng: number }) => void;
 }
 
-export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange, onUserLocation }: MapViewProps) {
+export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue, onBoundsChange, onUserLocation }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   // Base map tiles come from an external CDN and MapLibre's own init/worker sequence adds
@@ -28,6 +34,11 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
   // "loading." True until the style's tiles have actually painted (MapLibre's own "load"
   // event, not just the map object existing).
   const [isMapReady, setIsMapReady] = useState(false);
+  // Latches true the first time loading finishes — set directly during render (React's
+  // documented pattern for "remember something from a prop change") rather than in an
+  // effect, since an effect here would just cause an extra, avoidable re-render.
+  const [hasDataLoadedOnce, setHasDataLoadedOnce] = useState(false);
+  if (!isDataLoading && !hasDataLoadedOnce) setHasDataLoadedOnce(true);
   // Keyed by a stable id ("venue:<id>" / "cluster:<cluster_id>") so renderMarkers can
   // reconcile in place — update position/class/text on an already-mounted marker — rather
   // than tearing down and recreating every marker on every call. Recreating unconditionally
@@ -267,7 +278,7 @@ export function MapView({ venues, selectedVenueId, onSelectVenue, onBoundsChange
         className="absolute inset-0"
         style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
       />
-      {!isMapReady && (
+      {(!isMapReady || !hasDataLoadedOnce) && (
         <div className="map-loading-overlay" aria-hidden="true">
           <span className="map-loading-mark">
             <Radio size={26} color="white" />
