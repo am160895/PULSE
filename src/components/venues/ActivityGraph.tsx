@@ -41,7 +41,10 @@ export function ActivityGraph({ past, forecast }: { past: HistoryPoint[]; foreca
             contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
             labelFormatter={(t) => format(parseISO(t as string), "h:mm a")}
           />
-          <Area type="monotone" dataKey="actual" stroke="none" fill="url(#actualFill)" isAnimationActive={false} />
+          {/* Purely decorative fill under the actual line — tooltipType="none" keeps it out
+              of the hover tooltip, which otherwise listed "Actual" twice (once for this
+              Area, once for the Line below sharing the same dataKey) alongside "Typical". */}
+          <Area type="monotone" dataKey="actual" stroke="none" fill="url(#actualFill)" isAnimationActive={false} tooltipType="none" />
           <Line
             type="monotone"
             dataKey="typical"
