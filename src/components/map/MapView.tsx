@@ -252,11 +252,29 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Tracks the last venue a click actually selected — distinct from selectedVenueId
+  // itself so the pan below only fires on a genuine new selection, not on every data
+  // refresh/poll that happens to leave the same venue selected.
+  const lastPannedVenueIdRef = useRef<string | null>(null);
+
   // Re-render markers whenever the venue list or selection changes (data refresh, filters)
   // — reuses the same marker-drawing logic without re-triggering onBoundsChange.
   useEffect(() => {
     if (!mapRef.current) return;
     renderMarkersRef.current();
+
+    // The bottom sheet covers roughly the lower half of the screen — without this, a
+    // venue selected near the bottom edge re-covers itself (and everything else nearby)
+    // under its own sheet, making every other marker down there unreachable until the
+    // sheet closes. Nudging the selected point up into the clear area above the sheet
+    // keeps it (and its neighbors) tappable.
+    if (selectedVenueId && selectedVenueId !== lastPannedVenueIdRef.current) {
+      const venue = venues.find((v) => v.id === selectedVenueId);
+      if (venue) {
+        mapRef.current.easeTo({ center: [venue.longitude, venue.latitude], offset: [0, -170], duration: 450 });
+      }
+    }
+    lastPannedVenueIdRef.current = selectedVenueId;
   }, [venues, selectedVenueId]);
 
   // Inline styles, not just the Tailwind class: MapLibre's own stylesheet sets
