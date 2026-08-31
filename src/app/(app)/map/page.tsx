@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { Compass } from "lucide-react";
 import { MapView } from "@/components/map/MapView";
 import { MapSearchAndFilters, type MapFilter, type OpenFilterMode } from "@/components/map/MapSearchAndFilters";
 import { VenueBottomSheet } from "@/components/venues/VenueBottomSheet";
@@ -142,28 +140,7 @@ export default function MapPage() {
       {selectedVenue ? (
         <VenueBottomSheet venue={selectedVenue} onClose={() => setSelectedId(null)} onToggleSaved={handleToggleSaved} />
       ) : (
-        <>
-          {/* The flagship "decide for me" entry point — fixed above the Best Bet strip
-              (not inside its horizontal scroller) so it's always reachable with one tap,
-              never scrolled out of view. Hidden once a venue's selected, same as the strip
-              it sits above, since there's nothing left to decide between at that point. */}
-          <Link
-            href="/decide"
-            className="fixed z-30 flex items-center gap-2 rounded-full font-semibold"
-            style={{
-              bottom: "calc(env(safe-area-inset-bottom) + 186px)",
-              right: 16,
-              padding: "11px 18px",
-              background: "var(--accent)",
-              color: "white",
-              boxShadow: "0 6px 20px rgba(124, 92, 255, 0.45)",
-              fontSize: 14,
-            }}
-          >
-            <Compass size={16} /> Where should we go?
-          </Link>
-          <BestBetStrip userLocation={userLocation} />
-        </>
+        <BestBetStrip userLocation={userLocation} />
       )}
     </div>
   );
