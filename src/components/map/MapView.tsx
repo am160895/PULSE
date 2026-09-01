@@ -8,6 +8,7 @@ import { Radio } from "lucide-react";
 import type { VenueWithPulse } from "@/types";
 import { MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, MAP_STYLE_URL } from "@/config/constants";
 import { mapMarkerClass } from "@/lib/venues/markerColor";
+import { hasGenuineLiveSignal } from "@/lib/venues/coverageState";
 import type { BoundsParams } from "@/hooks/api";
 import { getUserLocationOnce } from "@/lib/geo/userLocation";
 
@@ -187,6 +188,12 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
         const hideScore = venue.coverageState === "DIRECTORY" || venue.currentPulseStatus === "CLOSED";
         const scoreText = hideScore ? "" : venue.pulse.pulseScore > 0 ? String(venue.pulse.pulseScore) : "–";
         const showRing = cls === "hot";
+        // A TYPICAL-coverage venue still shows its baseline-projected number (useful,
+        // honestly labeled everywhere else as "typical") but must never sit at full visual
+        // weight next to a marker backed by an actual live/recent report — a glance at the
+        // map is the very first trust moment, and "green dot with a number" must not read
+        // the same whether that number came from someone tonight or a Tuesday average.
+        const noSignalModifier = cls !== "closed" && !hasGenuineLiveSignal(venue.coverageState) ? " no-signal" : "";
 
         const existing = markersMapRef.current.get(key);
         if (existing) {
@@ -194,7 +201,7 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
           const wrapper = existing.getElement();
           const dot = wrapper.querySelector<HTMLDivElement>(".venue-marker");
           if (dot) {
-            const nextClass = `venue-marker ${cls}${isSelected ? " selected" : ""}`;
+            const nextClass = `venue-marker ${cls}${noSignalModifier}${isSelected ? " selected" : ""}`;
             if (dot.className !== nextClass) dot.className = nextClass;
             if (dot.textContent !== scoreText) dot.textContent = scoreText;
           }
@@ -227,7 +234,7 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
           wrapper.appendChild(ring);
         }
         const dot = document.createElement("div");
-        dot.className = `venue-marker ${cls}${isSelected ? " selected" : ""}`;
+        dot.className = `venue-marker ${cls}${noSignalModifier}${isSelected ? " selected" : ""}`;
         dot.textContent = scoreText;
         wrapper.appendChild(dot);
         wrapper.addEventListener("click", () => onSelectRef.current(venue.id));

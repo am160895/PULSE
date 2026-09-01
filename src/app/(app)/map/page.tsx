@@ -9,6 +9,7 @@ import { OnboardingBanner } from "@/components/map/OnboardingBanner";
 import { useInvalidateVenue, useVenueSearch, useVenuesInBounds, type BoundsParams } from "@/hooks/api";
 import { requestJson } from "@/lib/http/requestJson";
 import { isBestBetVenue } from "@/lib/pulse/explore";
+import { hasGenuineLiveSignal } from "@/lib/venues/coverageState";
 import { trackEvent } from "@/lib/analytics/track";
 
 export default function MapPage() {
@@ -50,13 +51,16 @@ export default function MapPage() {
       if (openFilterMode === "OPEN_NOW" && isClosedState(v) && !activeFilters.has("LATER_TONIGHT")) return false;
 
       for (const f of activeFilters) {
-        if (f === "HOT" && v.pulse.pulseLabel !== "HOT_NOW") return false;
-        if (f === "RISING" && v.pulse.trend !== "RISING" && v.pulse.trend !== "RISING_FAST") return false;
+        // Both HOT and RISING require a genuine live/recent report behind them — a
+        // DIRECTORY venue's baseline-only projection can compute to the same label/trend,
+        // but showing it under "Hot now"/"Rising" would dress up a guess as a real signal
+        // (same reasoning as the marker's own red state — see lib/venues/markerColor.ts).
+        if (f === "HOT" && !(hasGenuineLiveSignal(v.coverageState) && v.pulse.pulseLabel === "HOT_NOW")) return false;
+        if (f === "RISING" && !(hasGenuineLiveSignal(v.coverageState) && (v.pulse.trend === "RISING" || v.pulse.trend === "RISING_FAST"))) return false;
         // Same predicate the Explore tab's Best Bet section uses (lib/pulse/explore.ts) —
         // one definition, so the map and Explore never silently disagree on what counts.
         if (f === "BEST_BET" && !isBestBetVenue(v, new Date())) return false;
         if (f === "FRIENDS" && (v.friendsPresent?.length ?? 0) === 0) return false;
-        if (f === "NO_LINE" && v.pulse.waitEstimate && (v.pulse.waitEstimate.maxMinutes ?? 99) > 5) return false;
         if (f === "LATER_TONIGHT" && !(v.currentPulseStatus === "CLOSED" && v.openStatus.nextOpenAt)) return false;
         if (f === "BAR" && v.venueType !== "BAR") return false;
         if (f === "CLUB" && v.venueType !== "CLUB") return false;

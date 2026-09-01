@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Bookmark, MapPin, X } from "lucide-react";
 import type { VenueWithPulse } from "@/types";
-import { MoveBadge, OpenStateBadge, PulseLabelBadge, TrendIndicator, WaitBadge } from "@/components/venues/Badges";
+import { FreshnessBadge, MoveBadge, OpenStateBadge, PulseLabelBadge, TrendIndicator, WaitBadge } from "@/components/venues/Badges";
 import { VsTypicalBadge } from "@/components/venues/VsTypicalBadge";
 import { ActivityGraph } from "@/components/venues/ActivityGraph";
 import { useVenueHistory } from "@/hooks/api";
@@ -64,6 +64,10 @@ export function VenueBottomSheet({ venue, onClose, onToggleSaved }: Props) {
               <span className="badge badge-low">{venue.openStatus.displayText}</span>
             ) : (
               <>
+                {/* Whether that pulse score behind it is a real report from minutes ago or
+                    a pure historical guess is exactly the distinction a glance must not
+                    blur — never let a score alone imply "this is happening right now." */}
+                <FreshnessBadge label={venue.pulse.freshness} />
                 <PulseLabelBadge label={venue.pulse.pulseLabel} />
                 {venue.vsTypical && <VsTypicalBadge comparison={venue.vsTypical} />}
               </>

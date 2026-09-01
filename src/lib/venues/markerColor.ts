@@ -1,4 +1,5 @@
 import type { VenueWithPulse } from "@/types";
+import { hasGenuineLiveSignal } from "./coverageState";
 
 export type MapMarkerClass = "closed" | "hot" | "irish" | "open";
 
@@ -18,8 +19,7 @@ export type MapMarkerClass = "closed" | "hot" | "irish" | "open";
  */
 export function mapMarkerClass(venue: VenueWithPulse): MapMarkerClass {
   if (venue.currentPulseStatus === "CLOSED") return "closed";
-  const hasLiveSignal = venue.coverageState === "LIVE" || venue.coverageState === "RECENT";
-  if (hasLiveSignal && venue.pulse.pulseLabel === "HOT_NOW") return "hot";
+  if (hasGenuineLiveSignal(venue.coverageState) && venue.pulse.pulseLabel === "HOT_NOW") return "hot";
   if (venue.subcategory === "IRISH") return "irish";
   return "open";
 }

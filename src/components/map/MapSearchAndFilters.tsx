@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
-export type MapFilter = "HOT" | "RISING" | "BEST_BET" | "FRIENDS" | "NO_LINE" | "LATER_TONIGHT" | "BAR" | "CLUB" | "ROOFTOP" | "LIVE_MUSIC";
+export type MapFilter = "HOT" | "RISING" | "BEST_BET" | "FRIENDS" | "LATER_TONIGHT" | "BAR" | "CLUB" | "ROOFTOP" | "LIVE_MUSIC";
 
 export type OpenFilterMode = "OPEN_NOW" | "ALL";
 
@@ -16,7 +16,6 @@ const PRIMARY_FILTERS: { key: MapFilter; label: string }[] = [
   { key: "HOT", label: "Hot now" },
   { key: "RISING", label: "Rising" },
   { key: "BEST_BET", label: "Best bet" },
-  { key: "NO_LINE", label: "No line" },
   { key: "FRIENDS", label: "Friends" },
 ];
 

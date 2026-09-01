@@ -20,6 +20,15 @@ export function deriveCoverageState(hasBaselineData: boolean, freshness: Freshne
   return "TYPICAL";
 }
 
+/** True only when there's a genuine current report behind the score — TYPICAL and
+ * DIRECTORY are both a baseline-only projection, never a confirmed live crowd, so neither
+ * counts. Used anywhere "hot"/"rising" must mean a real signal, not a historical guess
+ * that happened to compute to the same label (map marker color, the Hot now/Rising map
+ * filters) — one definition so those never silently disagree. */
+export function hasGenuineLiveSignal(coverageState: VenueCoverageState): boolean {
+  return coverageState === "LIVE" || coverageState === "RECENT";
+}
+
 export const VENUE_COVERAGE_STATE_TEXT: Record<VenueCoverageState, string> = {
   LIVE: "Live",
   RECENT: "Recent",

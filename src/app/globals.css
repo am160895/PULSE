@@ -406,6 +406,16 @@ button {
   border-color: transparent;
 }
 
+/* No genuine live/recent report behind this reading (TYPICAL or DIRECTORY coverage) — a
+   baseline projection must never sit at the same visual weight as a real one, even though
+   it still earns an honest open/Irish color and (for TYPICAL) still shows its number. The
+   map is the first trust moment; this is the difference between "happening right now" and
+   "usually happening around now." */
+.venue-marker.no-signal {
+  opacity: 0.6;
+  box-shadow: none;
+}
+
 /* Genuinely closed (by real, always-known hours data) — deliberately plain (a dot, not a
    number) so it can never be mistaken for a fabricated live score, but still a solid,
    clearly-visible fill: the previous near-background dark grey with a faint border all but
