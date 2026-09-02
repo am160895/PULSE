@@ -9,7 +9,6 @@ import { OnboardingBanner } from "@/components/map/OnboardingBanner";
 import { useInvalidateVenue, useVenueSearch, useVenuesInBounds, type BoundsParams } from "@/hooks/api";
 import { requestJson } from "@/lib/http/requestJson";
 import { isBestBetVenue } from "@/lib/pulse/explore";
-import { hasGenuineLiveSignal } from "@/lib/venues/coverageState";
 import { trackEvent } from "@/lib/analytics/track";
 
 export default function MapPage() {
@@ -33,17 +32,29 @@ export default function MapPage() {
     return v.openState === "CLOSED" || v.openState === "TEMPORARILY_CLOSED" || v.openState === "PERMANENTLY_CLOSED";
   }
 
+  // Everything currently in bounds (or matching the search), before any chip/open-state
+  // filtering — this, not the filtered `venues` below, is what MapView clusters against.
+  // Clustering has to be built from a STABLE set: if it were built from the filtered list,
+  // every filter toggle would hand Supercluster a different point set and reshuffle which
+  // venues group together, so an open venue could visibly jump between "its own dot" and
+  // "folded into a cluster's count" purely from toggling Open now/All — same venues, same
+  // positions, just regrouped. Filtering only decides what's actually visible afterward
+  // (see visibleVenueIds), never what clusters with what.
+  const clusterableVenues = useMemo(
+    () => (query.trim() ? searchVenues ?? [] : boundsVenues ?? []),
+    [query, searchVenues, boundsVenues]
+  );
+
   const venues = useMemo(() => {
     const searching = query.trim().length > 0;
-    const base = searching ? searchVenues ?? [] : boundsVenues ?? [];
 
     // Searching is "find this specific place" — a deliberate lookup, not discovery
     // browsing, so it isn't filtered by vibe/type/open-state chips at all. A closed venue
     // found by name still shows (as a de-emphasized marker — see MapView), just honestly
     // marked closed once opened, rather than silently vanishing from search results.
-    if (searching) return base;
+    if (searching) return clusterableVenues;
 
-    const filtered = base.filter((v) => {
+    const filtered = clusterableVenues.filter((v) => {
       // Excludes venues we're actually confident are closed — never venues with simply no
       // hours on file, since absence of hours data isn't evidence of being closed. "Later
       // tonight" is the one deliberate exception, even while in Open-now mode — that view
@@ -51,12 +62,14 @@ export default function MapPage() {
       if (openFilterMode === "OPEN_NOW" && isClosedState(v) && !activeFilters.has("LATER_TONIGHT")) return false;
 
       for (const f of activeFilters) {
-        // Both HOT and RISING require a genuine live/recent report behind them — a
-        // DIRECTORY venue's baseline-only projection can compute to the same label/trend,
-        // but showing it under "Hot now"/"Rising" would dress up a guess as a real signal
-        // (same reasoning as the marker's own red state — see lib/venues/markerColor.ts).
-        if (f === "HOT" && !(hasGenuineLiveSignal(v.coverageState) && v.pulse.pulseLabel === "HOT_NOW")) return false;
-        if (f === "RISING" && !(hasGenuineLiveSignal(v.coverageState) && (v.pulse.trend === "RISING" || v.pulse.trend === "RISING_FAST"))) return false;
+        // pulseLabel/trend already blend live reports with historical-baseline
+        // popularity, weighted toward whichever is more trustworthy right now (see
+        // calculatePulseScore) — Hot now/Rising key off that directly, so they still
+        // surface something on a typical-Tuesday-afternoon map with zero live reports
+        // instead of coming back empty. Freshness honesty is handled at the text/badge
+        // level (FreshnessBadge, "No live pulse yet"), not by hiding these from filters.
+        if (f === "HOT" && v.pulse.pulseLabel !== "HOT_NOW") return false;
+        if (f === "RISING" && v.pulse.trend !== "RISING" && v.pulse.trend !== "RISING_FAST") return false;
         // Same predicate the Explore tab's Best Bet section uses (lib/pulse/explore.ts) —
         // one definition, so the map and Explore never silently disagree on what counts.
         if (f === "BEST_BET" && !isBestBetVenue(v, new Date())) return false;
@@ -79,14 +92,19 @@ export default function MapPage() {
       const bTime = b.openStatus.nextOpenAt ? new Date(b.openStatus.nextOpenAt).getTime() : Infinity;
       return aTime - bTime;
     });
-  }, [boundsVenues, searchVenues, query, activeFilters, openFilterMode]);
+  }, [clusterableVenues, query, activeFilters, openFilterMode]);
+
+  const visibleVenueIds = useMemo(() => new Set(venues.map((v) => v.id)), [venues]);
 
   const selectedVenue = venues.find((v) => v.id === selectedId) ?? null;
 
-  // Only relevant in "Open now" mode (the default) — a genuinely empty result (e.g. a quiet
-  // mid-morning hour with nothing open) needs an explanation, or the map just looks broken.
+  // A genuinely empty result needs an explanation, or the map just looks broken — but WHY
+  // it's empty matters: blaming "nothing's open" when a vibe/type chip (not the open-state
+  // toggle) is what actually zeroed out the list is simply false and sends someone toward
+  // the wrong fix (switching to All won't help if "Hot now" is the real reason).
   const dataLoaded = query.trim() ? searchVenues !== undefined : boundsVenues !== undefined;
-  const showNothingOpenState = dataLoaded && venues.length === 0 && !query.trim() && openFilterMode === "OPEN_NOW";
+  const hasChipFilters = activeFilters.size > 0;
+  const showEmptyState = dataLoaded && venues.length === 0 && !query.trim() && (openFilterMode === "OPEN_NOW" || hasChipFilters);
 
   function toggleFilter(f: MapFilter) {
     setActiveFilters((prev) => {
@@ -98,6 +116,10 @@ export default function MapPage() {
       }
       return next;
     });
+  }
+
+  function clearFilters() {
+    setActiveFilters(new Set());
   }
 
   async function handleToggleSaved(venueId: string) {
@@ -114,7 +136,8 @@ export default function MapPage() {
   return (
     <div className="fixed inset-0">
       <MapView
-        venues={venues}
+        venues={clusterableVenues}
+        visibleVenueIds={visibleVenueIds}
         isDataLoading={boundsVenues === undefined}
         selectedVenueId={selectedId}
         onSelectVenue={setSelectedId}
@@ -130,16 +153,26 @@ export default function MapPage() {
         onOpenFilterModeChange={setOpenFilterMode}
       />
       <OnboardingBanner />
-      {showNothingOpenState && (
-        <div className="fixed left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 px-6 text-center">
-          <p className="mb-3 text-[14px] text-[var(--text-secondary)]" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.8)" }}>
-            Nothing&apos;s open right now — see what&apos;s opening later, or search for a place by name.
-          </p>
-          <button className="btn btn-secondary" onClick={() => toggleFilter("LATER_TONIGHT")}>
-            Opening later tonight
-          </button>
-        </div>
-      )}
+      {showEmptyState &&
+        (hasChipFilters ? (
+          <div className="fixed left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 px-6 text-center">
+            <p className="mb-3 text-[14px] text-[var(--text-secondary)]" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.8)" }}>
+              Nothing matches that filter right now — try a different one, or clear it.
+            </p>
+            <button className="btn btn-secondary" onClick={clearFilters}>
+              Clear filters
+            </button>
+          </div>
+        ) : (
+          <div className="fixed left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 px-6 text-center">
+            <p className="mb-3 text-[14px] text-[var(--text-secondary)]" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.8)" }}>
+              Nothing&apos;s open right now — see what&apos;s opening later, or search for a place by name.
+            </p>
+            <button className="btn btn-secondary" onClick={() => toggleFilter("LATER_TONIGHT")}>
+              Opening later tonight
+            </button>
+          </div>
+        ))}
 
       {selectedVenue ? (
         <VenueBottomSheet venue={selectedVenue} onClose={() => setSelectedId(null)} onToggleSaved={handleToggleSaved} />

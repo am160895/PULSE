@@ -354,7 +354,16 @@ button {
   .map-loading-mark {
     animation: none;
   }
+  /* Still visible — just held still, not hidden outright. A loading screen with zero
+     motion and zero rings looks identical to a plain static icon, which reads as "is this
+     even loading?" rather than "loading, just not moving." One reduced-motion-safe static
+     ring is a real compromise, not a workaround: no transform/expansion, just a fixed
+     presence, same spirit as a static progress indicator. */
   .map-loading-ring {
+    animation: none;
+    opacity: 0.35;
+  }
+  .map-loading-ring.delayed {
     display: none;
   }
 }
@@ -404,16 +413,6 @@ button {
   background: var(--active);
   color: #04160c;
   border-color: transparent;
-}
-
-/* No genuine live/recent report behind this reading (TYPICAL or DIRECTORY coverage) — a
-   baseline projection must never sit at the same visual weight as a real one, even though
-   it still earns an honest open/Irish color and (for TYPICAL) still shows its number. The
-   map is the first trust moment; this is the difference between "happening right now" and
-   "usually happening around now." */
-.venue-marker.no-signal {
-  opacity: 0.6;
-  box-shadow: none;
 }
 
 /* Genuinely closed (by real, always-known hours data) — deliberately plain (a dot, not a

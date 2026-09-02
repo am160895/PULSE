@@ -8,12 +8,19 @@ import { Radio } from "lucide-react";
 import type { VenueWithPulse } from "@/types";
 import { MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, MAP_STYLE_URL } from "@/config/constants";
 import { mapMarkerClass } from "@/lib/venues/markerColor";
-import { hasGenuineLiveSignal } from "@/lib/venues/coverageState";
 import type { BoundsParams } from "@/hooks/api";
 import { getUserLocationOnce } from "@/lib/geo/userLocation";
 
 interface MapViewProps {
+  /** Every venue in bounds (or matching the search), NOT pre-filtered by open-state/chip
+   * filters — this is deliberately the full set so clustering stays stable regardless of
+   * which filters are active. See `visibleVenueIds` for what's actually shown. */
   venues: VenueWithPulse[];
+  /** Which of `venues` should actually render as a marker (or count toward a cluster)
+   * right now. Filtering happens AFTER clustering, not before — clustering itself is
+   * always built from every venue in bounds, so toggling a filter never reshuffles which
+   * venues group together, only which ones show. */
+  visibleVenueIds: Set<string>;
   /** True while the first venues fetch for the current viewport is still in flight — kept
    * separate from `isMapReady` so the loading overlay covers BOTH "tiles not painted yet"
    * and "circles haven't arrived yet," instead of revealing an empty-looking map first and
@@ -26,7 +33,7 @@ interface MapViewProps {
   onUserLocation?: (loc: { lat: number; lng: number }) => void;
 }
 
-export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue, onBoundsChange, onUserLocation }: MapViewProps) {
+export function MapView({ venues, visibleVenueIds, isDataLoading, selectedVenueId, onSelectVenue, onBoundsChange, onUserLocation }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   // Base map tiles come from an external CDN and MapLibre's own init/worker sequence adds
@@ -48,12 +55,16 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
   // markers popping/rescaling in place every few seconds instead of just updating quietly.
   const markersMapRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const venuesRef = useRef(venues);
+  const visibleVenueIdsRef = useRef(visibleVenueIds);
   const onSelectRef = useRef(onSelectVenue);
   const selectedVenueIdRef = useRef(selectedVenueId);
   const renderMarkersRef = useRef<() => void>(() => {});
   // Supercluster only needs rebuilding when the venue set itself changes, not on every
   // pan/zoom (moveend) or selection change — cache it keyed on the venues array reference.
-  const clusterIndexRef = useRef<{ venues: VenueWithPulse[]; index: Supercluster } | null>(null);
+  // byId travels with it (same rebuild trigger) so every marker lookup during a render is
+  // O(1) instead of an O(n) `.find()` — with clustering now walking cluster leaves too
+  // (see visibleVenueIds), a linear scan per lookup would otherwise multiply out fast.
+  const clusterIndexRef = useRef<{ venues: VenueWithPulse[]; index: Supercluster; byId: Map<string, VenueWithPulse> } | null>(null);
 
   // Keep "latest value" refs in an effect (not during render) so event handlers created
   // once inside the map-init effect below always see current props/state without
@@ -63,9 +74,10 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
   // the "selected" marker highlight would never actually update after a click.
   useEffect(() => {
     venuesRef.current = venues;
+    visibleVenueIdsRef.current = visibleVenueIds;
     onSelectRef.current = onSelectVenue;
     selectedVenueIdRef.current = selectedVenueId;
-  }, [venues, onSelectVenue, selectedVenueId]);
+  }, [venues, visibleVenueIds, onSelectVenue, selectedVenueId]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -128,6 +140,9 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
       const currentMap = mapRef.current;
       if (!currentMap) return;
 
+      // Built from the FULL venue set (see the `venues` prop doc) — never rebuilt just
+      // because a filter toggled, only when the actual bounds/search data changes. This is
+      // what keeps clustering geometry stable across filter toggles (see visibleVenueIds).
       if (clusterIndexRef.current?.venues !== venuesRef.current) {
         const index = new Supercluster({ radius: 50, maxZoom: 17 }).load(
           venuesRef.current.map((v) => ({
@@ -136,9 +151,11 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
             properties: { venueId: v.id },
           }))
         );
-        clusterIndexRef.current = { venues: venuesRef.current, index };
+        const byId = new Map(venuesRef.current.map((v) => [v.id, v]));
+        clusterIndexRef.current = { venues: venuesRef.current, index, byId };
       }
-      const index = clusterIndexRef.current.index;
+      const { index, byId } = clusterIndexRef.current;
+      const visibleIds = visibleVenueIdsRef.current;
 
       const b = currentMap.getBounds();
       const zoom = Math.floor(currentMap.getZoom());
@@ -146,37 +163,7 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
 
       const seenKeys = new Set<string>();
 
-      for (const feature of clusters) {
-        const [lng, lat] = feature.geometry.coordinates;
-        const props = feature.properties as { cluster?: boolean; cluster_id?: number; point_count?: number; venueId?: string };
-
-        if (props.cluster) {
-          const key = `cluster:${props.cluster_id}`;
-          seenKeys.add(key);
-          const existing = markersMapRef.current.get(key);
-          if (existing) {
-            // A cluster's membership/count never changes for a given cluster_id within
-            // the same index — only its screen position can, on pan/zoom.
-            existing.setLngLat([lng, lat]);
-            continue;
-          }
-
-          const size = Math.min(46, 26 + Math.log2(props.point_count ?? 2) * 5);
-          const el = document.createElement("div");
-          el.className = "cluster-marker";
-          el.style.width = `${size}px`;
-          el.style.height = `${size}px`;
-          el.style.fontSize = "11.5px";
-          el.textContent = String(props.point_count);
-          el.addEventListener("click", () => {
-            currentMap.easeTo({ center: [lng, lat], zoom: Math.min(17, zoom + 2.5) });
-          });
-          markersMapRef.current.set(key, new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(currentMap));
-          continue;
-        }
-
-        const venue = venuesRef.current.find((v) => v.id === props.venueId);
-        if (!venue) continue;
+      function upsertVenueMarker(map: maplibregl.Map, venue: VenueWithPulse, lng: number, lat: number) {
         const key = `venue:${venue.id}`;
         seenKeys.add(key);
 
@@ -188,12 +175,6 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
         const hideScore = venue.coverageState === "DIRECTORY" || venue.currentPulseStatus === "CLOSED";
         const scoreText = hideScore ? "" : venue.pulse.pulseScore > 0 ? String(venue.pulse.pulseScore) : "–";
         const showRing = cls === "hot";
-        // A TYPICAL-coverage venue still shows its baseline-projected number (useful,
-        // honestly labeled everywhere else as "typical") but must never sit at full visual
-        // weight next to a marker backed by an actual live/recent report — a glance at the
-        // map is the very first trust moment, and "green dot with a number" must not read
-        // the same whether that number came from someone tonight or a Tuesday average.
-        const noSignalModifier = cls !== "closed" && !hasGenuineLiveSignal(venue.coverageState) ? " no-signal" : "";
 
         const existing = markersMapRef.current.get(key);
         if (existing) {
@@ -201,7 +182,7 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
           const wrapper = existing.getElement();
           const dot = wrapper.querySelector<HTMLDivElement>(".venue-marker");
           if (dot) {
-            const nextClass = `venue-marker ${cls}${noSignalModifier}${isSelected ? " selected" : ""}`;
+            const nextClass = `venue-marker ${cls}${isSelected ? " selected" : ""}`;
             if (dot.className !== nextClass) dot.className = nextClass;
             if (dot.textContent !== scoreText) dot.textContent = scoreText;
           }
@@ -213,7 +194,7 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
           } else if (!showRing && existingRing) {
             existingRing.remove();
           }
-          continue;
+          return;
         }
 
         const wrapper = document.createElement("div");
@@ -234,12 +215,69 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
           wrapper.appendChild(ring);
         }
         const dot = document.createElement("div");
-        dot.className = `venue-marker ${cls}${noSignalModifier}${isSelected ? " selected" : ""}`;
+        dot.className = `venue-marker ${cls}${isSelected ? " selected" : ""}`;
         dot.textContent = scoreText;
         wrapper.appendChild(dot);
         wrapper.addEventListener("click", () => onSelectRef.current(venue.id));
 
-        markersMapRef.current.set(key, new maplibregl.Marker({ element: wrapper }).setLngLat([lng, lat]).addTo(currentMap));
+        markersMapRef.current.set(key, new maplibregl.Marker({ element: wrapper }).setLngLat([lng, lat]).addTo(map));
+      }
+
+      function upsertClusterMarker(map: maplibregl.Map, key: string, lng: number, lat: number, count: number, onClick: () => void) {
+        seenKeys.add(key);
+        const existing = markersMapRef.current.get(key);
+        if (existing) {
+          existing.setLngLat([lng, lat]);
+          const el = existing.getElement();
+          // Unlike before, the displayed count can now change between renders — it's the
+          // number of currently-VISIBLE leaves, not the cluster's fixed total membership.
+          if (el.textContent !== String(count)) el.textContent = String(count);
+          return;
+        }
+
+        const size = Math.min(46, 26 + Math.log2(Math.max(2, count)) * 5);
+        const el = document.createElement("div");
+        el.className = "cluster-marker";
+        el.style.width = `${size}px`;
+        el.style.height = `${size}px`;
+        el.style.fontSize = "11.5px";
+        el.textContent = String(count);
+        el.addEventListener("click", onClick);
+        markersMapRef.current.set(key, new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map));
+      }
+
+      for (const feature of clusters) {
+        const [lng, lat] = feature.geometry.coordinates;
+        const props = feature.properties as { cluster?: boolean; cluster_id?: number; point_count?: number; venueId?: string };
+
+        if (props.cluster) {
+          const clusterId = props.cluster_id!;
+          // Leaves, not the cluster's own point_count — point_count is the FULL membership
+          // regardless of filters, exactly what we can't use here (see the doc comment on
+          // `visibleVenueIds`). Cheap at this dataset's scale (bounded by venues in view).
+          const leaves = index.getLeaves(clusterId, Infinity) as unknown as Array<{ properties: { venueId: string } }>;
+          const visibleLeafIds = leaves.map((l) => l.properties.venueId).filter((id) => visibleIds.has(id));
+          if (visibleLeafIds.length === 0) continue;
+
+          if (visibleLeafIds.length === 1) {
+            // Down to one visible venue in this cluster — show it as its own marker
+            // (at its real coordinates, not the cluster's weighted centroid) rather than a
+            // "cluster of 1" bubble.
+            const venue = byId.get(visibleLeafIds[0]);
+            if (venue) upsertVenueMarker(currentMap, venue, venue.longitude, venue.latitude);
+            continue;
+          }
+
+          upsertClusterMarker(currentMap, `cluster:${clusterId}`, lng, lat, visibleLeafIds.length, () => {
+            currentMap.easeTo({ center: [lng, lat], zoom: Math.min(17, zoom + 2.5) });
+          });
+          continue;
+        }
+
+        if (!props.venueId || !visibleIds.has(props.venueId)) continue;
+        const venue = byId.get(props.venueId);
+        if (!venue) continue;
+        upsertVenueMarker(currentMap, venue, lng, lat);
       }
 
       for (const [key, marker] of markersMapRef.current) {
@@ -282,7 +320,7 @@ export function MapView({ venues, isDataLoading, selectedVenueId, onSelectVenue,
       }
     }
     lastPannedVenueIdRef.current = selectedVenueId;
-  }, [venues, selectedVenueId]);
+  }, [venues, visibleVenueIds, selectedVenueId]);
 
   // Inline styles, not just the Tailwind class: MapLibre's own stylesheet sets
   // `.maplibregl-map { position: relative }` on this element once it initializes,

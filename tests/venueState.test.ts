@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { deriveVenueOpenState } from "@/lib/venues/openState";
-import { deriveCoverageState, hasGenuineLiveSignal } from "@/lib/venues/coverageState";
+import { deriveCoverageState } from "@/lib/venues/coverageState";
 import { fridayNightNow, makeHours } from "./fixtures";
 
 const OPEN_ALL_WEEK = [0, 1, 2, 3, 4, 5, 6].map((d) => makeHours({ id: `h${d}`, venueId: "v", dayOfWeek: d, openTime: "00:00", closeTime: "23:59" }));
@@ -52,17 +52,5 @@ describe("deriveCoverageState", () => {
     expect(deriveCoverageState(true, "RECENT")).toBe("RECENT");
     expect(deriveCoverageState(true, "ESTIMATED")).toBe("TYPICAL");
     expect(deriveCoverageState(true, "TYPICAL")).toBe("TYPICAL");
-  });
-});
-
-describe("hasGenuineLiveSignal", () => {
-  it("is true only for LIVE and RECENT", () => {
-    expect(hasGenuineLiveSignal("LIVE")).toBe(true);
-    expect(hasGenuineLiveSignal("RECENT")).toBe(true);
-  });
-
-  it("is false for a baseline-only reading, even with real baseline history behind it", () => {
-    expect(hasGenuineLiveSignal("TYPICAL")).toBe(false);
-    expect(hasGenuineLiveSignal("DIRECTORY")).toBe(false);
   });
 });

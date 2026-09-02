@@ -25,9 +25,9 @@ describe("mapMarkerClass", () => {
     expect(mapMarkerClass(v)).toBe("hot");
   });
 
-  it("never shows hot off a DIRECTORY venue's baseline-projected label alone — that would dress up a guess as a confirmed live crowd", () => {
+  it("is hot (red) off a DIRECTORY venue's baseline-projected label too — pulseLabel already blends live and typical popularity, and the map should read as alive from typical patterns before any reports exist", () => {
     const v = makeVenueWithPulse({ coverageState: "DIRECTORY", pulse: { ...makeVenueWithPulse().pulse, pulseLabel: "HOT_NOW" } });
-    expect(mapMarkerClass(v)).toBe("open");
+    expect(mapMarkerClass(v)).toBe("hot");
   });
 
   it("is irish (orange) for a tagged Irish venue that isn't closed or really busy", () => {

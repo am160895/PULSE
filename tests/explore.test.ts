@@ -14,9 +14,9 @@ describe("isBestBetVenue", () => {
     expect(isBestBetVenue(v, now)).toBe(false);
   });
 
-  it("excludes LOW confidence even with a high score", () => {
+  it("still qualifies LOW confidence with a good score — a baseline-only projection must still be able to surface something", () => {
     const v = makeVenueWithPulse({ pulse: { ...makeVenueWithPulse().pulse, pulseScore: 90, confidenceLabel: "LOW" } });
-    expect(isBestBetVenue(v, now)).toBe(false);
+    expect(isBestBetVenue(v, now)).toBe(true);
   });
 
   it("excludes a venue falling fast", () => {

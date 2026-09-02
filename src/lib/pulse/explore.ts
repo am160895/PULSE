@@ -11,10 +11,15 @@ const SECTION_SIZE = 8;
 
 /** Exported (not inlined into buildExploreSections) so the map's Best Bet filter chip
  * calls this exact predicate — one definition, no risk of the map and Explore silently
- * drifting apart on what counts as a good bet. */
+ * drifting apart on what counts as a good bet.
+ *
+ * Doesn't gate on confidence — pulseScore already blends live reports with historical-
+ * baseline popularity (see calculatePulseScore), so a DIRECTORY/TYPICAL venue's baseline-
+ * driven score is exactly what lets Best Bet surface something before any reports exist,
+ * rather than coming back empty until live data accumulates. bestBetRank below still
+ * ranks higher-confidence picks first. */
 export function isBestBetVenue(v: VenueWithPulse, now: Date): boolean {
   if (v.pulse.pulseScore < BEST_BET_MIN_SCORE) return false;
-  if (v.pulse.confidenceLabel === "LOW") return false;
   if (v.pulse.trend === "FALLING_FAST") return false;
   if (v.distanceMeters !== undefined && v.distanceMeters > BEST_BET_MAX_DISTANCE_METERS) return false;
   if (v.openStatus.closesAt) {
