@@ -54,6 +54,11 @@ export function useVenueSearch(query: string) {
       return data.venues;
     },
     enabled: query.trim().length > 0,
+    // Without this, every changed character is a brand-new query key, so `data` goes
+    // undefined for the length of that request — the map's markers all disappeared and
+    // reappeared on literally every keystroke. Same fix as useVenuesInBounds' own
+    // placeholderData, same reasoning: keep showing the last-known results in the gap.
+    placeholderData: keepPreviousData,
   });
 }
 

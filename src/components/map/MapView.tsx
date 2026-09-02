@@ -28,7 +28,10 @@ interface MapViewProps {
    * value latches internally so later background refreshes never re-trigger the overlay. */
   isDataLoading: boolean;
   selectedVenueId: string | null;
-  onSelectVenue: (venueId: string) => void;
+  /** Also called with `null` on a click that lands on empty map (not a marker) while a
+   * venue is selected — the sheet's only dismiss path used to be its own small close
+   * button, since the sheet deliberately doesn't block map clicks (see visibleVenueIds). */
+  onSelectVenue: (venueId: string | null) => void;
   onBoundsChange: (bounds: BoundsParams) => void;
   onUserLocation?: (loc: { lat: number; lng: number }) => void;
 }
@@ -111,6 +114,13 @@ export function MapView({ venues, visibleVenueIds, isDataLoading, selectedVenueI
       setIsMapReady(true);
     });
     map.on("moveend", emitBounds);
+    // Marker elements are a separate DOM overlay outside the WebGL canvas, so a marker
+    // click never reaches this — only a genuine tap on empty map does, which is exactly
+    // the "tap outside to dismiss" gap the bottom sheet itself can't cover without also
+    // blocking clicks meant for other markers (its own click-through fix relies on that).
+    map.on("click", () => {
+      if (selectedVenueIdRef.current) onSelectRef.current(null);
+    });
     renderMarkersRef.current = renderMarkers;
 
     // MapLibre measures its container's actual pixel size once at construction and never
@@ -169,10 +179,11 @@ export function MapView({ venues, visibleVenueIds, isDataLoading, selectedVenueI
 
         const cls = mapMarkerClass(venue);
         const isSelected = venue.id === selectedVenueIdRef.current;
-        // No live PULSE data at all (even though the marker still earns an honest open/
-        // closed color, see mapMarkerClass) or genuinely closed — either way, never show a
-        // number here, even "–", since that would still look like a fabricated live score.
-        const hideScore = venue.coverageState === "DIRECTORY" || venue.currentPulseStatus === "CLOSED";
+        // pulseScore is always a real number, live or baseline-blended (see
+        // calculatePulseScore) — shown on every open venue, same as the marker's own
+        // color (mapMarkerClass). Only a genuinely CLOSED venue hides it, since a score on
+        // a closed dot would look like current activity that can't exist.
+        const hideScore = venue.currentPulseStatus === "CLOSED";
         const scoreText = hideScore ? "" : venue.pulse.pulseScore > 0 ? String(venue.pulse.pulseScore) : "–";
         const showRing = cls === "hot";
 
@@ -198,17 +209,20 @@ export function MapView({ venues, visibleVenueIds, isDataLoading, selectedVenueI
         }
 
         const wrapper = document.createElement("div");
-        // inline-block, not the default block: MapLibre re-purposes this element AS its
-        // own `.maplibregl-marker` container rather than wrapping it in a new one, and a
-        // plain block-level div with no explicit width stretches to fill that marker
-        // container's containing block — the full map width. Harmless for the marker
-        // circle itself (it has its own fixed 44px size), but .pulse-ring's `inset: -6px`
-        // resolves against WRAPPER's size, not the circle's, so it rendered as a
-        // ~1000px-wide glowing oval across the bottom of the map instead of a small ring
-        // around one marker. inline-block shrink-wraps to the marker circle's actual
-        // size, which fixes both.
+        // inline-flex, not the default block: MapLibre re-purposes this element AS its own
+        // `.maplibregl-marker` container rather than wrapping it in a new one, and a plain
+        // block-level div with no explicit width stretches to fill that marker container's
+        // containing block — the full map width (inline-flex, like inline-block, shrinks
+        // to fit instead). min-width/min-height plus centering give the CLOSED marker (a
+        // deliberately tiny 13px visual dot) a real ~36px clickable footprint without
+        // enlarging the dot itself — a 13px CSS-pixel tap target is unusable on a real
+        // touchscreen, and closed venues are common on any view where "Open now" is off.
         wrapper.style.position = "relative";
-        wrapper.style.display = "inline-block";
+        wrapper.style.display = "inline-flex";
+        wrapper.style.alignItems = "center";
+        wrapper.style.justifyContent = "center";
+        wrapper.style.minWidth = "36px";
+        wrapper.style.minHeight = "36px";
         if (showRing) {
           const ring = document.createElement("div");
           ring.className = "pulse-ring";
@@ -316,7 +330,15 @@ export function MapView({ venues, visibleVenueIds, isDataLoading, selectedVenueI
     if (selectedVenueId && selectedVenueId !== lastPannedVenueIdRef.current) {
       const venue = venues.find((v) => v.id === selectedVenueId);
       if (venue) {
-        mapRef.current.easeTo({ center: [venue.longitude, venue.latitude], offset: [0, -170], duration: 450 });
+        // A flat -170px shift assumes the viewport is tall enough to absorb it — on a
+        // short/landscape phone (~375-430px tall), that would land the marker under the
+        // fixed search bar/filter row or clip it off the top edge entirely (MapLibre's
+        // container clips overflow), the opposite of "keeps it tappable." Clamp the shift
+        // so the target never rises above roughly the bottom of the filter row.
+        const containerHeight = mapRef.current.getContainer().clientHeight;
+        const maxUpwardShift = Math.max(0, containerHeight / 2 - 130);
+        const verticalOffset = -Math.min(170, maxUpwardShift);
+        mapRef.current.easeTo({ center: [venue.longitude, venue.latitude], offset: [0, verticalOffset], duration: 450 });
       }
     }
     lastPannedVenueIdRef.current = selectedVenueId;

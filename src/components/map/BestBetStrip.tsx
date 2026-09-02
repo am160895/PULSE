@@ -19,7 +19,7 @@ export function BestBetStrip({ userLocation }: Props) {
   if (!bestBet || bestBet.venues.length === 0) return null;
 
   return (
-    <div className="fixed left-0 right-0 bottom-16 z-30 pb-2">
+    <div className="fixed left-0 right-0 z-30 pb-2" style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}>
       <p className="mb-1.5 px-4 text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--text-secondary)", textShadow: "0 1px 6px rgba(0,0,0,0.6)" }}>
         Best bet tonight
       </p>

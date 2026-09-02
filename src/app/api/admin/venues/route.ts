@@ -20,6 +20,18 @@ export async function POST(request: Request) {
   }
 
   const data = parsed.data;
+
+  // The bulk importer has always guarded against re-adding a venue that's already in the
+  // system (see import/route.ts) — hand-entering one venue at a time through this form had
+  // no equivalent check at all, so the same "Django" could get created twice with nobody
+  // told until two markers showed up on top of each other on the map.
+  const isDuplicateName = (await listAllVenuesForAdmin()).some(
+    (v) => v.name.trim().toLowerCase() === data.name.trim().toLowerCase()
+  );
+  if (isDuplicateName) {
+    return NextResponse.json({ error: `A venue named "${data.name}" already exists.` }, { status: 409 });
+  }
+
   const venue = await createVenueAdmin({
     name: data.name,
     category: data.category,

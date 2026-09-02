@@ -121,6 +121,42 @@ describe("currentPulseStatusFor", () => {
   });
 });
 
+describe("DST spring-forward transition (2026-03-08, clocks jump 2 AM -> 3 AM in America/New_York)", () => {
+  // Saturday 10 PM - 3 AM, crossing into the spring-forward Sunday.
+  const SAT_10PM_3AM_VERIFIED = [
+    makeHours({ id: "h", venueId: "v", dayOfWeek: 6, openTime: "22:00", closeTime: "03:00", source: "ADMIN", lastVerifiedAt: new Date("2026-01-01").toISOString() }),
+  ];
+
+  it("reports the true real-time minutes/close instant across the transition, not wall-clock minutes", () => {
+    // 2026-03-08T01:35:00-05:00 is 25 REAL minutes before the true 3:00 AM EDT close
+    // (2026-03-08T07:00:00.000Z) — treating every day as a flat 1440 minutes would instead
+    // compute 85 minutes remaining and a closesAt an hour later than reality.
+    const now = new Date("2026-03-08T01:35:00-05:00");
+    const window = findOpenWindow(SAT_10PM_3AM_VERIFIED, now, NY);
+    expect(window.isOpenNow).toBe(true);
+    expect(window.minutesUntilClose).not.toBeNull();
+    expect(window.minutesUntilClose!).toBeCloseTo(25, 0);
+
+    const status = getVenueOpenStatus(SAT_10PM_3AM_VERIFIED, [], now, NY, null);
+    expect(status.status).toBe("CLOSING_SOON");
+    expect(status.closesAt).toBe("2026-03-08T07:00:00.000Z");
+  });
+
+  it("still resolves the very next opening correctly when scanning forward across the transition day", () => {
+    // Sunday-only 10 AM-6 PM venue, checked from Friday 11:30 PM (America/New_York) — two
+    // days before the transition, but late enough locally that the old fixed-24-real-hour
+    // day-stepping could drift past midnight once it crossed the transition and skip
+    // Sunday March 8 (the venue's actual next opening) entirely.
+    const sundayOnly = [
+      makeHours({ id: "h", venueId: "v", dayOfWeek: 0, openTime: "10:00", closeTime: "18:00", source: "ADMIN", lastVerifiedAt: new Date("2026-01-01").toISOString() }),
+    ];
+    const now = new Date("2026-03-06T23:30:00-05:00"); // Friday 11:30 PM
+    const status = getVenueOpenStatus(sundayOnly, [], now, NY, null);
+    expect(status.nextOpenAt).not.toBeNull();
+    expect(status.nextOpenAt).toBe("2026-03-08T14:00:00.000Z"); // Sunday 10:00 AM EDT
+  });
+});
+
 describe("getVenueOpenStatus (spec §17)", () => {
   // Fresh, admin-verified hours here — a SEED/never-verified source (the FRI_5PM_3AM
   // default) is intentionally LOW confidence and renders "Hours may vary" instead of an

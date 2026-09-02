@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { VenueWithPulse } from "@/types";
 import { getCurrentSession } from "@/lib/auth";
-import { listSavedVenueIds, listVenues } from "@/lib/data/repository";
+import { listSavedVenueIds, listVenues, listVenuesInBounds } from "@/lib/data/repository";
 import { listVisiblePresenceForViewer } from "@/lib/data/social";
 import { computeVenueStatesBatch } from "@/lib/pulse/composeVenue";
 import { calculateMoveScore } from "@/lib/pulse/moveScore";
 import { pickDecision } from "@/lib/pulse/decide";
-import { haversineDistanceMeters } from "@/lib/geo";
+import { boundingBoxFromCenter, haversineDistanceMeters } from "@/lib/geo";
 import { BEST_BET_MAX_DISTANCE_METERS } from "@/config/constants";
 
 export async function GET(request: NextRequest) {
@@ -20,10 +20,16 @@ export async function GET(request: NextRequest) {
   const userLocation = lat && lng ? { lat: Number(lat), lng: Number(lng) } : null;
 
   const now = new Date();
-  const allVenues = await listVenues();
+  // With a known location, the query itself is scoped to the max-distance box instead of
+  // pulling every active venue citywide — same reasoning as the alternatives cap on
+  // /api/venues/[id]. Without one there's no way to know which subset is relevant, so that
+  // branch still needs the full active set.
+  const allVenues = userLocation
+    ? await listVenuesInBounds(boundingBoxFromCenter(userLocation, BEST_BET_MAX_DISTANCE_METERS))
+    : await listVenues();
 
-  // Cheap prefilter before the batch score, same reasoning as the alternatives cap on
-  // /api/venues/[id] — no point Move-scoring a venue so far away it would never win anyway.
+  // Exact-radius filter, not just the bounding box's corners — same reasoning as
+  // listVenuesInBounds' own belt-and-suspenders filter.
   const candidates = userLocation
     ? allVenues.filter((v) => haversineDistanceMeters(userLocation, { lat: v.latitude, lng: v.longitude }) <= BEST_BET_MAX_DISTANCE_METERS)
     : allVenues;

@@ -3,7 +3,7 @@ import { HOURS_VERIFIED_FRESH_DAYS, HOURS_VERIFIED_STALE_DAYS } from "@/config/c
 import { findOpenWindow } from "./hours";
 import { deriveVenueOpenState } from "./openState";
 import { buildEffectiveHours, effectiveHoursForDate } from "./specialHours";
-import { zonedDateParts, zonedDateToUtc } from "@/lib/time/zoned";
+import { nextCalendarDate, zonedDateParts, zonedDateToUtc } from "@/lib/time/zoned";
 
 const NEXT_OPEN_SCAN_DAYS = 8;
 
@@ -35,8 +35,13 @@ function hoursConfidenceForRows(rows: VenueHours[], now: Date): ConfidenceLabel 
 }
 
 function findNextOpenInstant(hours: VenueHours[], specialHours: VenueSpecialHours[], now: Date, timeZone: string): Date | null {
+  // Steps forward by pure CALENDAR days (nextCalendarDate), not by adding a fixed 24 real
+  // hours per iteration — the latter drifts by however far a DST transition shifts the
+  // wall clock, and once that drift pushes the reconstructed date past midnight, the scan
+  // can skip the transition day's calendar date entirely (and every later day shifts one
+  // day later too), potentially missing a venue's very next opening.
+  let candidate = zonedDateParts(now, timeZone);
   for (let dayOffset = 0; dayOffset < NEXT_OPEN_SCAN_DAYS; dayOffset++) {
-    const candidate = zonedDateParts(new Date(now.getTime() + dayOffset * 24 * 3_600_000), timeZone);
     const dayHours = effectiveHoursForDate(hours, specialHours, candidate);
     for (const h of dayHours) {
       if (h.isClosed || !h.openTime) continue;
@@ -51,6 +56,8 @@ function findNextOpenInstant(hours: VenueHours[], specialHours: VenueSpecialHour
       );
       if (openInstant.getTime() > now.getTime()) return openInstant;
     }
+    const next = nextCalendarDate(candidate);
+    candidate = { ...candidate, ...next, dayOfWeek: (candidate.dayOfWeek + 1) % 7 };
   }
   return null;
 }

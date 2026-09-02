@@ -26,13 +26,20 @@ export function VenueBottomSheet({ venue, onClose, onToggleSaved }: Props) {
   const { data: history } = useVenueHistory(venue.id);
 
   return (
-    <div className="fixed left-0 right-0 bottom-16 z-40 px-2 pb-2" style={{ pointerEvents: "none" }}>
+    <div
+      className="fixed left-0 right-0 z-40 px-2 pb-2"
+      style={{ bottom: "calc(64px + env(safe-area-inset-bottom))", pointerEvents: "none" }}
+    >
       <div
         className="venue-sheet mx-auto max-w-xl"
         style={{ maxHeight: "calc(100dvh - 140px)", overflowY: "auto", pointerEvents: "auto" }}
       >
         <div className="sheet-handle" />
-        <button onClick={onClose} className="absolute top-3 right-3 text-[var(--text-muted)]" aria-label="Close">
+        <button
+          onClick={onClose}
+          className="absolute top-1 right-1 p-2 text-[var(--text-muted)]"
+          aria-label="Close"
+        >
           <X size={18} />
         </button>
         <div className="px-5 pb-5 pt-1">

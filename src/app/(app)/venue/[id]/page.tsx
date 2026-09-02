@@ -63,7 +63,13 @@ function progressFromXp(xp: XpResult) {
 
 export default function VenuePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data, isLoading, isError, refetch } = useVenue(id);
+  // isLoadingError, not isError: this page polls every 20s (see the confirmation-toast
+  // effect below), and isError stays true after ANY failed fetch even once earlier data is
+  // cached — a single transient background poll failure was blanking the whole page back to
+  // a bare "couldn't load" screen, discarding already-loaded data and silently closing
+  // whatever sheet (Report, Quick check, etc.) the user had open. isLoadingError only fires
+  // when there's never been a successful fetch to fall back on — the genuinely stuck case.
+  const { data, isLoading, isLoadingError, refetch } = useVenue(id);
   const { data: history } = useVenueHistory(id);
   const invalidate = useInvalidateVenue();
   const [showReport, setShowReport] = useState(false);
@@ -160,7 +166,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.venue.id]);
 
-  if (isError) {
+  if (isLoadingError) {
     return (
       <div className="max-w-2xl mx-auto px-5 py-6">
         <BackLink />

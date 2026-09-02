@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
-import { deleteVenueAdmin, getVenueById, updateVenueAdmin } from "@/lib/data/repository";
+import { deleteVenueAdmin, getVenueById, listAllVenuesForAdmin, updateVenueAdmin } from "@/lib/data/repository";
 import { venueAdminPatchSchema } from "@/lib/venues/adminSchema";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -26,6 +26,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const data = parsed.data;
+
+  // Only relevant when the name is actually changing — same rationale as the create route's
+  // check, applied here so a rename can't collide with another existing venue either.
+  if (data.name !== undefined) {
+    const isDuplicateName = (await listAllVenuesForAdmin()).some(
+      (v) => v.id !== id && v.name.trim().toLowerCase() === data.name!.trim().toLowerCase()
+    );
+    if (isDuplicateName) {
+      return NextResponse.json({ error: `A venue named "${data.name}" already exists.` }, { status: 409 });
+    }
+  }
+
   const venue = await updateVenueAdmin(id, {
     ...data,
     website: data.website === "" ? null : data.website,

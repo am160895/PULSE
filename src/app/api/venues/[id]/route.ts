@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import type { VenueWithPulse } from "@/types";
 import { getCurrentSession } from "@/lib/auth";
-import { getVenueById, listSavedVenueIds, listVenues } from "@/lib/data/repository";
+import { getVenueById, listSavedVenueIds, listVenuesInBounds } from "@/lib/data/repository";
 import { listVisiblePresenceForViewer } from "@/lib/data/social";
 import { computeVenueStatesBatch } from "@/lib/pulse/composeVenue";
 import { calculateMoveScore } from "@/lib/pulse/moveScore";
-import { haversineDistanceMeters } from "@/lib/geo";
+import { boundingBoxFromCenter, haversineDistanceMeters } from "@/lib/geo";
 import { getOwnershipRequest } from "@/lib/data/ownership";
 
 const ALTERNATIVES_RADIUS_METERS = 700;
@@ -24,16 +24,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!venue) return NextResponse.json({ error: "Venue not found" }, { status: 404 });
 
   const now = new Date();
-  const [savedIds, presence, allVenues, myOwnershipRequest] = await Promise.all([
+  // Only venues within the alternatives radius are ever eligible below, so scope the fetch
+  // to that same box up front instead of pulling every active venue citywide just to throw
+  // almost all of them away in the distance filter two lines later.
+  const [savedIds, presence, nearbyVenues, myOwnershipRequest] = await Promise.all([
     listSavedVenueIds(session.profile.id),
     listVisiblePresenceForViewer(session.profile.id, now),
-    listVenues(),
+    listVenuesInBounds(boundingBoxFromCenter({ lat: venue.latitude, lng: venue.longitude }, ALTERNATIVES_RADIUS_METERS)),
     getOwnershipRequest(venue.id, session.profile.id),
   ]);
   const friendsPresent = presence.filter((p) => p.venueId === venue.id);
 
   // Surfaced on the venue page when this venue is falling or has a long wait (§63).
-  const nearby = allVenues
+  const nearby = nearbyVenues
     .filter((v) => v.id !== venue.id)
     .map((v) => ({ v, distance: haversineDistanceMeters({ lat: venue.latitude, lng: venue.longitude }, { lat: v.latitude, lng: v.longitude }) }))
     .filter(({ distance }) => distance <= ALTERNATIVES_RADIUS_METERS)

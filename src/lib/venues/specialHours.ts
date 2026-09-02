@@ -1,5 +1,5 @@
 import type { VenueHours, VenueSpecialHours } from "@/types";
-import { zonedDateParts, type ZonedDateParts } from "@/lib/time/zoned";
+import { previousCalendarDate, zonedDateParts, type ZonedDateParts } from "@/lib/time/zoned";
 
 type DateParts = Pick<ZonedDateParts, "year" | "month" | "day" | "dayOfWeek">;
 
@@ -49,7 +49,10 @@ export function buildEffectiveHours(hours: VenueHours[], specialHours: VenueSpec
   if (specialHours.length === 0) return hours;
 
   const today = zonedDateParts(now, timeZone);
-  const yesterday = zonedDateParts(new Date(now.getTime() - 24 * 3_600_000), timeZone);
+  // Pure calendar-date rollback, not "subtract 24 real hours" — the latter can land on the
+  // wrong calendar date within about an hour of midnight on the day after a DST
+  // transition, since that day is only 23 (or 25) real hours long.
+  const yesterday = { ...previousCalendarDate(today), dayOfWeek: (today.dayOfWeek + 6) % 7 };
 
   const todaySpecial = specialHours.find((s) => s.specialDate === toIsoDate(today));
   const yesterdaySpecial = specialHours.find((s) => s.specialDate === toIsoDate(yesterday));

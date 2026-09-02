@@ -78,8 +78,19 @@ export function zonedDateParts(date: Date, timeZone: string): ZonedDateParts {
  * Inverse of zonedDateParts: given a wall-clock date/time as it should read *in
  * `timeZone`*, returns the UTC instant it corresponds to. No `date-fns-tz`/`luxon` is
  * installed — this uses the same Intl.DateTimeFormat technique zonedParts relies on, run
- * in reverse with one correction pass (accurate to the minute outside the DST-transition
- * hour itself, which doesn't matter for nightlife open/close times).
+ * in reverse via fixed-point iteration.
+ *
+ * A single correction pass (the previous implementation) is only correct when the zone's
+ * UTC offset at the *initial guess* matches the offset that actually applies at the real
+ * target instant — true almost always, but false for wall-clock times that fall between
+ * those two instants straddling a DST transition (e.g. resolving "3:00 AM" on the exact
+ * date the clocks spring forward: the naive guess lands pre-transition, so the one-shot
+ * correction picks the wrong (EST) offset instead of the correct post-transition EDT
+ * offset, landing an hour off). Iterating re-derives the offset at each successive
+ * estimate instead of trusting the first one, which converges to the right answer even
+ * when a transition falls between the initial guess and the true instant — this matters
+ * for real nightlife hours: any overnight-crossing close time (e.g. 3 AM) is exactly the
+ * kind of value that can land in this window on the ~1-2 DST-transition nights per year.
  */
 export function zonedDateToUtc(
   year: number,
@@ -89,16 +100,16 @@ export function zonedDateToUtc(
   minute: number,
   timeZone: string
 ): Date {
-  const guess = new Date(Date.UTC(year, month - 1, day, hour, minute));
-  const guessAsZoned = zonedDateParts(guess, timeZone);
-  const guessInterpretedAsUtc = Date.UTC(
-    guessAsZoned.year,
-    guessAsZoned.month - 1,
-    guessAsZoned.day,
-    guessAsZoned.hour,
-    guessAsZoned.minute
-  );
-  return new Date(guess.getTime() + (guess.getTime() - guessInterpretedAsUtc));
+  const targetAsUtcMs = Date.UTC(year, month - 1, day, hour, minute);
+  let instantMs = targetAsUtcMs;
+  for (let i = 0; i < 4; i++) {
+    const zoned = zonedDateParts(new Date(instantMs), timeZone);
+    const zonedAsUtcMs = Date.UTC(zoned.year, zoned.month - 1, zoned.day, zoned.hour, zoned.minute);
+    const nextInstantMs = targetAsUtcMs + (instantMs - zonedAsUtcMs);
+    if (nextInstantMs === instantMs) break;
+    instantMs = nextInstantMs;
+  }
+  return new Date(instantMs);
 }
 
 export function formatDate(parts: Pick<ZonedDateParts, "year" | "month" | "day">): string {
@@ -111,6 +122,14 @@ export function formatDate(parts: Pick<ZonedDateParts, "year" | "month" | "day">
 export function previousCalendarDate(parts: Pick<ZonedDateParts, "year" | "month" | "day">): { year: number; month: number; day: number } {
   const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
   d.setUTCDate(d.getUTCDate() - 1);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+/** Same as previousCalendarDate, one day forward — e.g. an overnight-crossing hours row's
+ * close time belongs to the calendar day AFTER the one it opened on. */
+export function nextCalendarDate(parts: Pick<ZonedDateParts, "year" | "month" | "day">): { year: number; month: number; day: number } {
+  const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  d.setUTCDate(d.getUTCDate() + 1);
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 }
 

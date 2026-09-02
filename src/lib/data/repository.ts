@@ -410,8 +410,34 @@ export async function upsertDirectoryVenueFromExternal(fields: {
   return (await getVenueById(row.id))!;
 }
 
+/**
+ * Filters by lat/lng range in the query itself rather than pulling every active venue
+ * over the wire and filtering in memory (the previous version delegated to listVenues()
+ * unconditionally) — this endpoint is hit on every map pan/zoom and every background poll,
+ * so a full-table fetch+deserialize on each call was real, growing cost, not a one-time
+ * page load. `venues` also has a `location geography(point,4326)` column with a GiST index
+ * (see migration 0001) for true spatial queries via PostGIS operators, but that requires a
+ * Postgres RPC function (PostgREST has no built-in ST_Intersects/&& support) — out of reach
+ * without a way to apply new SQL migrations against the live database from here. A plain
+ * range filter on the existing latitude/longitude columns still cuts the transferred and
+ * filtered row count down to roughly the viewport instead of every active venue citywide,
+ * which is the actual cost this was flagged for.
+ */
 export async function listVenuesInBounds(box: BoundingBox): Promise<Venue[]> {
-  const venues = await listVenues();
+  const rows = unwrap(
+    await supabaseAdmin()
+      .from("venues")
+      .select(VENUE_SELECT)
+      .eq("is_active", true)
+      .gte("latitude", box.south)
+      .lte("latitude", box.north)
+      .gte("longitude", box.west)
+      .lte("longitude", box.east)
+  );
+  const venues: Venue[] = rows.map(rowToVenue);
+  // Belt-and-suspenders, not redundant: PostgREST rounds/coerces numeric filter bounds in
+  // ways worth not fully trusting for exact edge inclusion, and this costs nothing once the
+  // set is already narrowed to the viewport.
   return venues.filter((v) => isWithinBoundingBox({ lat: v.latitude, lng: v.longitude }, box));
 }
 
