@@ -114,10 +114,11 @@ export function MapView({ venues, visibleVenueIds, isDataLoading, selectedVenueI
       setIsMapReady(true);
     });
     map.on("moveend", emitBounds);
-    // Marker elements are a separate DOM overlay outside the WebGL canvas, so a marker
-    // click never reaches this — only a genuine tap on empty map does, which is exactly
-    // the "tap outside to dismiss" gap the bottom sheet itself can't cover without also
-    // blocking clicks meant for other markers (its own click-through fix relies on that).
+    // A marker click stops its own event from bubbling here (see upsertVenueMarker/
+    // upsertClusterMarker) — this only ever fires for a genuine tap on empty map, which is
+    // exactly the "tap outside to dismiss" gap the bottom sheet itself can't cover without
+    // also blocking clicks meant for other markers (its own click-through fix relies on
+    // that).
     map.on("click", () => {
       if (selectedVenueIdRef.current) onSelectRef.current(null);
     });
@@ -232,7 +233,16 @@ export function MapView({ venues, visibleVenueIds, isDataLoading, selectedVenueI
         dot.className = `venue-marker ${cls}${isSelected ? " selected" : ""}`;
         dot.textContent = scoreText;
         wrapper.appendChild(dot);
-        wrapper.addEventListener("click", () => onSelectRef.current(venue.id));
+        // stopPropagation, not just the handler: marker elements sit INSIDE the same
+        // container MapLibre's own click detection listens on (not a separate overlay, as
+        // assumed when the map's own "click empty space to deselect" handler below was
+        // added) — without this, a marker click bubbled up, immediately deselecting the
+        // venue this very click had just selected. Looked like "clicking a dot just moves
+        // the map and doesn't open the place."
+        wrapper.addEventListener("click", (e) => {
+          e.stopPropagation();
+          onSelectRef.current(venue.id);
+        });
 
         markersMapRef.current.set(key, new maplibregl.Marker({ element: wrapper }).setLngLat([lng, lat]).addTo(map));
       }
@@ -256,7 +266,13 @@ export function MapView({ venues, visibleVenueIds, isDataLoading, selectedVenueI
         el.style.height = `${size}px`;
         el.style.fontSize = "11.5px";
         el.textContent = String(count);
-        el.addEventListener("click", onClick);
+        // Same stopPropagation reasoning as upsertVenueMarker — without it, zooming into a
+        // cluster also bubbled into the map's own click handler and deselected whatever
+        // venue was already selected.
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          onClick();
+        });
         markersMapRef.current.set(key, new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map));
       }
 
