@@ -728,6 +728,33 @@ export async function listBaselinesForVenues(venueIds: string[]): Promise<Map<st
   return groupBy(rows.map(rowToBaseline), (b) => b.venueId);
 }
 
+/** Used by scripts/backfillVenueBaselines.ts — one venue's full 7x24 row set per call
+ * (168 rows, comfortably under any known payload limit here, so no chunking needed).
+ * Never called from any request path; the `unique (venue_id, day_of_week, hour_of_day)`
+ * constraint means calling this on a venue that already has rows will fail rather than
+ * silently duplicate — the caller is expected to skip venues that already have baselines. */
+export async function insertBaselinesForVenue(
+  venueId: string,
+  rows: Omit<VenueHourlyBaseline, "id" | "venueId">[]
+): Promise<void> {
+  if (rows.length === 0) return;
+  unwrap(
+    await supabaseAdmin()
+      .from("venue_hourly_baselines")
+      .insert(
+        rows.map((r) => ({
+          venue_id: venueId,
+          day_of_week: r.dayOfWeek,
+          hour_of_day: r.hourOfDay,
+          expected_activity_score: r.expectedActivityScore,
+          expected_wait_score: r.expectedWaitScore,
+          sample_count: r.sampleCount,
+          updated_at: r.updatedAt,
+        }))
+      )
+  );
+}
+
 export async function listEventsForVenue(venueId: string): Promise<VenueEvent[]> {
   const rows = unwrap(await supabaseAdmin().from("venue_events").select().eq("venue_id", venueId));
   return rows.map(rowToEvent);
