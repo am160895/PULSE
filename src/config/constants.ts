@@ -153,6 +153,7 @@ export const CONTRIBUTOR_LEVELS: Array<{ name: ContributorLevelName; label: stri
   { name: "INSIDER", label: "Insider", minXp: 350 },
   { name: "LOCAL", label: "Local", minXp: 1000 },
   { name: "PULSE_PRO", label: "Pulse Pro", minXp: 2500 },
+  { name: "CITY_INSIDER", label: "City Insider", minXp: 5000 },
 ];
 
 export const NEIGHBORHOOD_INSIDER_XP_THRESHOLD = 150;
@@ -252,4 +253,5 @@ export const ANALYTICS_EVENT_NAMES = [
   "VENUE_SAVED",
   "DIRECTIONS_CLICKED",
   "FRIEND_INVITED",
+  "PERK_REDEEMED",
 ] as const satisfies readonly AnalyticsEventName[];

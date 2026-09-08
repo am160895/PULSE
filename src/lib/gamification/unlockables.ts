@@ -27,7 +27,7 @@ export const UNLOCKABLE_BENEFIT_REQUIREMENTS: Record<UnlockableBenefit, Contribu
   CONTRIBUTOR_ONLY_INSIGHTS: "PULSE_PRO",
 };
 
-const LEVEL_ORDER: ContributorLevelName[] = ["EXPLORER", "SCOUT", "INSIDER", "LOCAL", "PULSE_PRO"];
+const LEVEL_ORDER: ContributorLevelName[] = ["EXPLORER", "SCOUT", "INSIDER", "LOCAL", "PULSE_PRO", "CITY_INSIDER"];
 
 /** Not called from any real feature gate yet — this is the extension point a future
  * pass wires an actual benefit into, not a live restriction on anything today. */

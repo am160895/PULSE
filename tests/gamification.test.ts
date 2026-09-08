@@ -42,7 +42,7 @@ describe("levelForXp", () => {
   });
 
   it("thresholds are configurable via CONTRIBUTOR_LEVELS, not hardcoded here", () => {
-    expect(CONTRIBUTOR_LEVELS.map((l) => l.minXp)).toEqual([0, 100, 350, 1000, 2500]);
+    expect(CONTRIBUTOR_LEVELS.map((l) => l.minXp)).toEqual([0, 100, 350, 1000, 2500, 5000]);
   });
 });
 

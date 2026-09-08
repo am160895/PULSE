@@ -14,6 +14,7 @@ import { getTrustScore, saveTrustScore } from "@/lib/data/social";
 import { computePulseForVenue } from "@/lib/pulse/composeVenue";
 import { buildImpactMessage } from "@/lib/pulse/impactMessage";
 import { awardXpForReport } from "@/lib/gamification/xp";
+import { coverageXpMultiplier } from "@/lib/gamification/diminishingReturns";
 import { evaluateBadges } from "@/lib/gamification/badges";
 import { SupabaseQueryError } from "@/lib/supabase/unwrap";
 import { FIRST_REPORT_TONIGHT_WINDOW_HOURS } from "@/config/constants";
@@ -91,7 +92,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const trustToSave = suspicious ? applyTrustAdjustment(trustAfterSubmission, "FLAGGED") : trustAfterSubmission;
   await saveTrustScore({ ...trustToSave, updatedAt: now.toISOString() });
 
-  const xp = await awardXpForReport(session.profile.id, report, venue, isFirstReportTonight);
+  // Uses the pre-report confidence snapshot (already computed above for the impact
+  // message) — a venue that's already well-covered pays less for one more confirming
+  // report, directing reward toward genuine information gaps instead of piling more XP
+  // onto a venue nobody actually needed more signal on.
+  const xp = await awardXpForReport(session.profile.id, report, venue, isFirstReportTonight, coverageXpMultiplier(before.confidenceScore));
   const badgesUnlocked = await evaluateBadges(session.profile.id, now);
 
   const after = await computePulseForVenue(venue, now);

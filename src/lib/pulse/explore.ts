@@ -1,9 +1,14 @@
 import type { VenueWithPulse } from "@/types";
 import { BEST_BET_MAX_DISTANCE_METERS, BEST_BET_MIN_MINUTES_UNTIL_CLOSE, BEST_BET_MIN_SCORE } from "@/config/constants";
+import { calculateInformationValue } from "@/lib/gamification/informationValue";
 
 export interface ExploreSection {
   key: string;
   title: string;
+  /** Only set for sections whose title alone wouldn't explain why these venues are here
+   * (currently just "needsSignal") — every other section leaves this undefined and
+   * renders exactly as before. */
+  subtitle?: string;
   venues: VenueWithPulse[];
 }
 
@@ -85,6 +90,27 @@ export function buildExploreSections(venues: VenueWithPulse[], now: Date): Explo
     .filter((v) => ["CLUB", "LOUNGE", "BAR"].includes(v.venueType))
     .sort(byScoreDesc);
 
+  // Ranked by calculateInformationValue, not pulseScore — the point of this section is
+  // "where would one more real report actually help," which is a different question than
+  // "what's busiest." Drawn from `open` (excludes only genuinely CLOSED venues, same as
+  // every other section) since a quiet DIRECTORY venue that's simply open is exactly the
+  // kind of gap this exists to surface, not a reason to exclude it.
+  const needsSignal = open
+    .map((v) => ({
+      v,
+      iv: calculateInformationValue({
+        pulseScore: v.pulse.pulseScore,
+        freshness: v.pulse.freshness,
+        waitEstimate: v.pulse.waitEstimate,
+        historicalDemandScore: v.pulse.components.find((c) => c.key === "historical")?.value ?? 0,
+        sourceDiversityScore: v.signalHealth.sourceDiversityScore,
+        agreementScore: v.signalHealth.agreementScore,
+      }),
+    }))
+    .filter((x): x is { v: VenueWithPulse; iv: NonNullable<ReturnType<typeof calculateInformationValue>> } => x.iv !== null)
+    .sort((a, b) => b.iv.valueScore - a.iv.valueScore)
+    .map((x) => x.v);
+
   const sections: ExploreSection[] = [
     { key: "bestBet", title: "Best bet", venues: bestBet },
     { key: "bestVibe", title: "Best vibe", venues: bestVibe },
@@ -96,6 +122,15 @@ export function buildExploreSections(venues: VenueWithPulse[], now: Date): Explo
     { key: "quietButGood", title: "Quiet but good", venues: quietButGood },
     { key: "noLinePicks", title: "No-line picks", venues: noLinePicks },
     { key: "lateNight", title: "Late-night", venues: lateNight },
+    {
+      key: "needsSignal",
+      title: "Places that need a signal",
+      // Accurate, not aspirational: coverageXpMultiplier only ever discounts a well-covered
+      // venue's XP (never boosts above the base amount) — these venues just aren't
+      // discounted, since there's nothing to discount against yet.
+      subtitle: "Nobody's confirmed these tonight — your report counts for its full value here.",
+      venues: needsSignal,
+    },
   ];
 
   return sections

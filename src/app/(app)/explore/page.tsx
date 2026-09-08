@@ -51,9 +51,10 @@ export default function ExplorePage() {
       <div className="flex flex-col gap-7">
         {sections?.map((section) => (
           <section key={section.key}>
-            <h2 className="mb-3" style={{ fontSize: 17 }}>
+            <h2 className={section.subtitle ? "mb-1" : "mb-3"} style={{ fontSize: 17 }}>
               {section.title}
             </h2>
+            {section.subtitle && <p className="mb-3 text-[13px] text-[var(--text-secondary)]">{section.subtitle}</p>}
             <div className="scroll-x">
               {section.venues.map((v) => (
                 <Link key={v.id} href={`/venue/${v.id}`} className="venue-card shrink-0" style={{ scrollSnapAlign: "start" }}>

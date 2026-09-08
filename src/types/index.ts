@@ -401,6 +401,28 @@ export interface FoundingScoutConfig {
   awardedCount: number;
 }
 
+/** Eligibility is a plain XP-threshold comparison, never a stored level name — this app
+ * never persists "level" anywhere (see lib/gamification/levels.ts's levelForXp), and a
+ * perk shouldn't be the one place that starts doing so. `venueId` null means a citywide/
+ * PULSE-controlled perk rather than a specific venue's — no venue partnerships exist yet,
+ * so every real perk today has venueId null, but the column doesn't hard-code that. */
+export interface Perk {
+  id: string;
+  venueId: string | null;
+  title: string;
+  description: string;
+  requiredMinXp: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface PerkRedemption {
+  id: string;
+  perkId: string;
+  userId: string;
+  redeemedAt: string;
+}
+
 export type AnalyticsEventName =
   | "LANDING_VIEW"
   | "MAP_VIEW"
@@ -414,7 +436,8 @@ export type AnalyticsEventName =
   | "VENUE_SHARED"
   | "VENUE_SAVED"
   | "DIRECTIONS_CLICKED"
-  | "FRIEND_INVITED";
+  | "FRIEND_INVITED"
+  | "PERK_REDEEMED";
 
 /** A delayed-accuracy confirmation newly awarded THIS request — see
  * lib/gamification/consensus.ts. Surfaced by /api/venues and /api/venues/[id] so the
@@ -425,7 +448,7 @@ export interface ConfirmedSignal {
   xpAwarded: number;
 }
 
-export type ContributorLevelName = "EXPLORER" | "SCOUT" | "INSIDER" | "LOCAL" | "PULSE_PRO";
+export type ContributorLevelName = "EXPLORER" | "SCOUT" | "INSIDER" | "LOCAL" | "PULSE_PRO" | "CITY_INSIDER";
 
 export interface ContributorLevel {
   name: ContributorLevelName;

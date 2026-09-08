@@ -6,6 +6,7 @@ import { LogoutButton } from "@/components/ui/LogoutButton";
 import { AnonymousGate } from "@/components/ui/AnonymousGate";
 import { ProgressBar } from "@/components/gamification/ProgressBar";
 import { BadgeMedallion } from "@/components/gamification/BadgeMedallion";
+import { PerksSection } from "@/components/gamification/PerksSection";
 import { BADGE_CATALOG, neighborhoodBadgeDisplayName } from "@/lib/gamification/badgeCatalog";
 import { levelForXp } from "@/lib/gamification/levels";
 import {
@@ -15,6 +16,7 @@ import {
   listUserBadges,
   listUserNeighborhoodProgress,
 } from "@/lib/data/gamification";
+import { listActivePerks, listRedemptionsForUser } from "@/lib/data/perks";
 import { SIGNAL_CONFIRMATION_MAX_AGE_MINUTES } from "@/config/constants";
 import type { BadgeCode } from "@/types";
 
@@ -32,11 +34,13 @@ export default async function YouPage() {
   }
 
   const now = new Date();
-  const [progress, neighborhoods, badges, recentEvents] = await Promise.all([
+  const [progress, neighborhoods, badges, recentEvents, allPerks, redemptions] = await Promise.all([
     getUserProgress(session.profile.id),
     listUserNeighborhoodProgress(session.profile.id),
     listUserBadges(session.profile.id),
     listRecentXpEventsForUser(session.profile.id, now),
+    listActivePerks(),
+    listRedemptionsForUser(session.profile.id),
   ]);
 
   const level = levelForXp(progress.totalXp);
@@ -75,6 +79,9 @@ export default async function YouPage() {
   );
   const globalBadgeCodes = (Object.keys(BADGE_CATALOG) as BadgeCode[]).filter((c) => c !== "NEIGHBORHOOD_INSIDER");
   const foundingScoutSequence = badges.find((b) => b.badgeCode === "FOUNDING_SCOUT")?.sequenceNumber ?? null;
+
+  const redeemedPerkIds = new Set(redemptions.map((r) => r.perkId));
+  const eligiblePerks = allPerks.filter((p) => progress.totalXp >= p.requiredMinXp && !redeemedPerkIds.has(p.id));
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-6 pb-10">
@@ -144,6 +151,8 @@ export default async function YouPage() {
           </div>
         </section>
       )}
+
+      <PerksSection perks={eligiblePerks} />
 
       {neighborhoods.length > 0 && (
         <section className="mb-6">

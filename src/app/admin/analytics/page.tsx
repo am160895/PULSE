@@ -42,6 +42,10 @@ export default async function AdminAnalyticsPage() {
         { event: "FRIEND_INVITED", label: "Friend invites sent" },
       ],
     },
+    {
+      title: "Perks",
+      rows: [{ event: "PERK_REDEEMED", label: "Perks redeemed" }],
+    },
   ];
 
   return (

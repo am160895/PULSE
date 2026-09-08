@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Award, BarChart3, LayoutDashboard, MapPin, Shield, Users } from "lucide-react";
+import { Award, BarChart3, Gift, LayoutDashboard, MapPin, Shield, Users } from "lucide-react";
 import { getAdminSession } from "@/lib/auth";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -18,6 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <AdminNavLink href="/admin/venues/claims" icon={<Shield size={16} />} label="Claims" />
         <AdminNavLink href="/admin/users" icon={<Users size={16} />} label="Users" />
         <AdminNavLink href="/admin/founding-scout" icon={<Award size={16} />} label="Founding Scout" />
+        <AdminNavLink href="/admin/perks" icon={<Gift size={16} />} label="Perks" />
         <AdminNavLink href="/admin/analytics" icon={<BarChart3 size={16} />} label="Analytics" />
         <div className="mt-auto pt-4 px-2 text-[12px] text-[var(--text-muted)]">
           {session.profile.displayName}

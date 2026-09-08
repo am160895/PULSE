@@ -11,6 +11,9 @@ export interface AwardXpInput {
   venueId?: string | null;
   neighborhood?: string | null;
   metadata?: Record<string, unknown>;
+  /** Scales XP_VALUES[rewardType] before award — see lib/gamification/diminishingReturns.ts.
+   * Never affects idempotency (still keyed on user_id/source_id/reward_type only). */
+  xpMultiplier?: number;
 }
 
 export interface AwardXpResult {
@@ -30,7 +33,7 @@ export interface AwardXpResult {
  * rewarded — awards nothing and never re-fires a level-up celebration.
  */
 export async function awardXp(input: AwardXpInput): Promise<AwardXpResult> {
-  const xpAmount = XP_VALUES[input.rewardType];
+  const xpAmount = Math.round(XP_VALUES[input.rewardType] * (input.xpMultiplier ?? 1));
   const event = await insertXpEvent({
     userId: input.userId,
     rewardType: input.rewardType,
@@ -89,11 +92,17 @@ export interface ReportXpBreakdown {
  * same-venue repeat report impossible before it ever reaches this function, so there is no
  * "repeat report" case left for XP-side cooldown logic to guard against.
  */
+// Discounted only for the ordinary observational rewards — FIRST_REPORT_TONIGHT and
+// SIGNAL_CONFIRMED/VENUE_CORRECTION (awarded elsewhere) already encode their own scarcity
+// (being first, being later corroborated) and shouldn't be double-discounted on top of that.
+const COVERAGE_DISCOUNTABLE_REWARDS = new Set<XpRewardType>(["CROWD_REPORT", "WAIT_REPORT", "ENERGY_REPORT", "LIVE_NOTE"]);
+
 export async function awardXpForReport(
   userId: string,
   report: VenueReport,
   venue: Venue,
-  isFirstReportTonight: boolean
+  isFirstReportTonight: boolean,
+  coverageMultiplier = 1
 ): Promise<ReportXpBreakdown> {
   const rewardTypes: XpRewardType[] = ["CROWD_REPORT", "WAIT_REPORT", "ENERGY_REPORT"];
   if (report.crowdNote) rewardTypes.push("LIVE_NOTE");
@@ -114,6 +123,7 @@ export async function awardXpForReport(
       venueId: venue.id,
       neighborhood: venue.neighborhood,
       metadata: rewardType === "WAIT_REPORT" ? { waitLevel: report.waitLevel } : undefined,
+      xpMultiplier: COVERAGE_DISCOUNTABLE_REWARDS.has(rewardType) ? coverageMultiplier : 1,
     });
     results[rewardType] = result;
     if (result.awarded) totalXpAwarded += result.xpAmount;
