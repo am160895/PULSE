@@ -67,7 +67,12 @@ export function ConfidenceBadge({ label }: { label: ConfidenceLabel }) {
 
 export function FreshnessBadge({ label }: { label: FreshnessLabel }) {
   if (label === "LIVE") return <span className="badge badge-live">Live</span>;
-  const text = label === "RECENT" ? "Recent" : label === "ESTIMATED" ? "Estimated" : "Typical activity";
+  // TYPICAL gets its own (amber) treatment, distinct from RECENT/ESTIMATED's grey — those
+  // two mean "someone actually reported this, it's just aging"; TYPICAL means nobody has
+  // reported anything at all and this is a modeled estimate. Same grey for all three used
+  // to blur exactly the distinction this badge exists to make.
+  if (label === "TYPICAL") return <span className="badge badge-medium">Typical activity</span>;
+  const text = label === "RECENT" ? "Recent" : "Estimated";
   return <span className="badge badge-low">{text}</span>;
 }
 

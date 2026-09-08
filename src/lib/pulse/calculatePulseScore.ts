@@ -213,13 +213,22 @@ function buildExplanation(input: {
   if (input.reportCount > 0) {
     parts.push(`${input.reportCount} recent report${input.reportCount === 1 ? "" : "s"}`);
   } else {
-    parts.push("no live reports yet — based on typical activity for this day and time");
+    parts.push("typical activity for this day and time");
   }
   if (input.hasEvent) parts.push("an event tonight");
   if (input.trend === "RISING_FAST" || input.trend === "RISING") parts.push("rising over the last 30 minutes");
   if (input.trend === "FALLING_FAST" || input.trend === "FALLING") parts.push("falling over the last 30 minutes");
 
   const base = `Based on ${parts.join(", ")}.`;
-  if (input.confidenceLabel === "LOW") return `${base} Based mostly on typical activity for this time — treat this as an estimate.`;
+  // Tied to reportCount, not confidenceLabel: the old version only added this caveat at
+  // LOW confidence, so a venue with zero live reports but enough historical sample count
+  // to clear LOW (currently capped below HIGH regardless, see HISTORICAL_ONLY_CONFIDENCE_CAP
+  // in signals/confidence.ts, but not guaranteed to always be by construction) could show a
+  // "good" score with no honesty caveat at all. Zero live reports always means "this is a
+  // modeled estimate," independent of how confident that estimate happens to be.
+  if (input.reportCount === 0) {
+    return `${base} No live reports yet tonight — treat this as an estimate, not a live read.`;
+  }
+  if (input.confidenceLabel === "LOW") return `${base} Only a few reports so far — treat this as an early read, not a settled one.`;
   return base;
 }

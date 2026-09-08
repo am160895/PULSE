@@ -382,6 +382,18 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
             </div>
           </div>
 
+          {/* These are two different questions with two different color languages on
+              purpose — Pulse's color tracks busy-ness (grey to red as it climbs); Move's
+              color tracks its own verdict (green/red/etc. below), not the number itself.
+              Spelling that out here is what actually clears up "why don't these match,"
+              not changing either color scheme to match the other. */}
+          <p className="text-[12px] text-[var(--text-muted)] mb-3">
+            <span className="font-medium text-[var(--text-secondary)]">Pulse {pulse.pulseScore}</span> is how busy it
+            is right now. <span className="font-medium text-[var(--text-secondary)]">Move {venue.move?.moveScore}</span>{" "}
+            is whether it&apos;s worth going — it factors in wait, distance, and momentum, so it can read differently
+            than Pulse alone.
+          </p>
+
           <div className="flex items-center justify-between mb-4 text-sm border-y border-[var(--border)] py-3 flex-wrap gap-2">
             <TrendIndicator trend={pulse.trend} delta={pulse.trendDeltaLast30Min} />
             <OpenStateBadge state={venue.openState} />
