@@ -6,6 +6,8 @@ import {
   SIGNAL_CONFIRMATION_MIN_CORROBORATING_REPORTS,
 } from "@/config/constants";
 import { activityValueForReport } from "@/lib/pulse/signals/liveReports";
+import { getTrustScore, saveTrustScore } from "@/lib/data/social";
+import { applyTrustAdjustment } from "@/lib/reports/trust";
 import { awardXp } from "./xp";
 
 export interface ConsensusCheck {
@@ -74,7 +76,14 @@ export async function evaluateOwnReportsForConsensus(
       neighborhood: venue.neighborhood,
       metadata: { confirmedReportId: report.id, corroboratingCount, trendAtConfirmation },
     });
-    if (result.awarded) confirmed.push({ reportId: report.id, venueId: venue.id, xpAwarded: result.xpAmount });
+    if (result.awarded) {
+      confirmed.push({ reportId: report.id, venueId: venue.id, xpAwarded: result.xpAmount });
+      // Gated on result.awarded (idempotent, once per report) the same way the XP side
+      // is — without this, trust only ever moved via the new-account ramp, and a
+      // genuinely accurate report never actually raised the reporter's standing.
+      const trust = await getTrustScore(viewerId);
+      await saveTrustScore({ ...applyTrustAdjustment(trust, "AGREED"), updatedAt: now.toISOString() });
+    }
   }
   return confirmed;
 }

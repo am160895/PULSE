@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { anonymousSessionError, getCurrentSession } from "@/lib/auth";
 import { submitReport } from "@/lib/reports/submitReport";
-import { detectRepetitivePattern } from "@/lib/reports/trust";
+import { applyTrustAdjustment, detectRepetitivePattern } from "@/lib/reports/trust";
 import {
   createReport,
+  flagReport,
   getLastReportByUserForVenue,
   getVenueById,
   hasReportSinceForVenue,
@@ -73,10 +74,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     throw err;
   }
 
-  await saveTrustScore({ ...trust, reportsSubmitted: trust.reportsSubmitted + 1, updatedAt: now.toISOString() });
-
   const recentPattern = await recentReportValuesByUser(session.profile.id);
   const suspicious = detectRepetitivePattern(recentPattern);
+  // Both used to be computed and then discarded: detectRepetitivePattern's result only
+  // ever reached the client as flaggedForReview (nothing acted on it), and trust never
+  // moved except via the new-account ramp. flagReport() writes to the real report_flags
+  // table (defined since the very first migration, never actually called from anywhere);
+  // flagged_by is NOT NULL with no "system" sentinel profile, so the reporter's own id is
+  // the honest minimal fit here — the AUTO-prefixed reason is what distinguishes this
+  // from a human flagging someone else's report.
+  if (suspicious) {
+    await flagReport(report.id, session.profile.id, "AUTO: repetitive pattern across recent reports");
+  }
+
+  const trustAfterSubmission = { ...trust, reportsSubmitted: trust.reportsSubmitted + 1 };
+  const trustToSave = suspicious ? applyTrustAdjustment(trustAfterSubmission, "FLAGGED") : trustAfterSubmission;
+  await saveTrustScore({ ...trustToSave, updatedAt: now.toISOString() });
 
   const xp = await awardXpForReport(session.profile.id, report, venue, isFirstReportTonight);
   const badgesUnlocked = await evaluateBadges(session.profile.id, now);

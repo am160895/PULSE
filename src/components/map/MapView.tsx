@@ -187,6 +187,12 @@ export function MapView({ venues, visibleVenueIds, isDataLoading, selectedVenueI
         const hideScore = venue.currentPulseStatus === "CLOSED";
         const scoreText = hideScore ? "" : venue.pulse.pulseScore > 0 ? String(venue.pulse.pulseScore) : "–";
         const showRing = cls === "hot";
+        // Purely additive on top of the existing color language — every other marker
+        // (the common baseline-only case) renders exactly as before. Gated on
+        // signalHealth's OWN (source-diversity-capped) confidence label, not pulse's, so
+        // a single loud reporter can't alone earn this treatment.
+        const verifiedLive = !hideScore && venue.signalHealth.state === "LIVE" && venue.signalHealth.confidenceLabel === "HIGH";
+        const dotClass = `venue-marker ${cls}${isSelected ? " selected" : ""}${verifiedLive ? " verified-live" : ""}`;
 
         const existing = markersMapRef.current.get(key);
         if (existing) {
@@ -194,8 +200,7 @@ export function MapView({ venues, visibleVenueIds, isDataLoading, selectedVenueI
           const wrapper = existing.getElement();
           const dot = wrapper.querySelector<HTMLDivElement>(".venue-marker");
           if (dot) {
-            const nextClass = `venue-marker ${cls}${isSelected ? " selected" : ""}`;
-            if (dot.className !== nextClass) dot.className = nextClass;
+            if (dot.className !== dotClass) dot.className = dotClass;
             if (dot.textContent !== scoreText) dot.textContent = scoreText;
           }
           const existingRing = wrapper.querySelector(".pulse-ring");
@@ -230,7 +235,7 @@ export function MapView({ venues, visibleVenueIds, isDataLoading, selectedVenueI
           wrapper.appendChild(ring);
         }
         const dot = document.createElement("div");
-        dot.className = `venue-marker ${cls}${isSelected ? " selected" : ""}`;
+        dot.className = dotClass;
         dot.textContent = scoreText;
         wrapper.appendChild(dot);
         // stopPropagation, not just the handler: marker elements sit INSIDE the same

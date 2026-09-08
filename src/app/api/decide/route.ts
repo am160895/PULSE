@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
       currentPulseStatus: state.currentPulseStatus,
       hoursDiscrepancy: state.hoursDiscrepancy,
       vsTypical: state.vsTypical,
+      signalHealth: state.signalHealth,
       isSaved: savedIds.has(venue.id),
       friendsPresent: visiblePresence.filter((p) => p.venueId === venue.id),
       distanceMeters,

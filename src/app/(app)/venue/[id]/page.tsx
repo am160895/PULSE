@@ -31,7 +31,7 @@ import { requestJson } from "@/lib/http/requestJson";
 import { buildShareStatusText } from "@/lib/share/shareText";
 import { trackEvent } from "@/lib/analytics/track";
 import { format, parseISO } from "date-fns";
-import type { BadgeCode, ContributorLevel } from "@/types";
+import type { BadgeCode, ContributorLevel, SignalHealth } from "@/types";
 
 interface XpResult {
   awarded?: boolean;
@@ -399,6 +399,7 @@ export default function VenuePage({ params }: { params: Promise<{ id: string }> 
             )}
             <details className="mt-2">
               <summary className="text-[12px] text-[var(--text-muted)] cursor-pointer">What&apos;s this based on</summary>
+              <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{signalHealthSummary(venue.signalHealth)}</p>
               <ul className="mt-2 text-[13px] text-[var(--text-secondary)] flex flex-col gap-1">
                 {pulse.components.map((c) => (
                   <li key={c.key} className="flex justify-between">
@@ -600,6 +601,27 @@ function BackLink() {
       <ArrowLeft size={14} /> Map
     </Link>
   );
+}
+
+/** Real counts, never a fabricated "impact" number — the whole point of surfacing
+ * signalHealth here is to say exactly how many independent people this is based on,
+ * not just a bare score. */
+function signalHealthSummary(health: SignalHealth): string {
+  const { state, independentContributors: n, verifiedContributors: verified } = health;
+  const verifiedPart = verified > 0 ? `, ${verified} verified nearby` : "";
+  if (state === "LIVE" || state === "RECENT") {
+    const recency = state === "LIVE" ? "recent" : "somewhat recent";
+    return `Based on ${n} independent ${recency} contributor${n === 1 ? "" : "s"}${verifiedPart}.`;
+  }
+  if (state === "MIXED") {
+    return n <= 1
+      ? "Based on a single recent report — not enough voices yet to call this a settled read."
+      : "Recent reports here don't fully agree yet — treat this as an early read, not a settled one.";
+  }
+  if (state === "EXPECTED") {
+    return "No live reports yet — based mainly on typical activity for this day and time.";
+  }
+  return "Not enough evidence yet to say much beyond a rough guess.";
 }
 
 function SectionTitle({ icon, title }: { icon?: React.ReactNode; title: string }) {

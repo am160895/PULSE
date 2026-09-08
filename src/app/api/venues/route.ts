@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   const newlyUnlockedBadges = [...states.values()].flatMap((s) => s.newlyUnlockedBadges);
 
   const results: VenueWithPulse[] = venues.map((venue) => {
-    const { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, vsTypical } = states.get(venue.id)!;
+    const { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, vsTypical, signalHealth } = states.get(venue.id)!;
     const friendsPresent = visiblePresence.filter((p) => p.venueId === venue.id);
     const distanceMeters = userLocation ? haversineDistanceMeters(userLocation, { lat: venue.latitude, lng: venue.longitude }) : undefined;
     return {
@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
       currentPulseStatus,
       hoursDiscrepancy,
       vsTypical,
+      signalHealth,
       isSaved: savedIds.has(venue.id),
       friendsPresent,
       distanceMeters,

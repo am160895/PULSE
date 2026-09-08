@@ -457,6 +457,36 @@ export interface PulseResult {
   explanation: string;
 }
 
+/**
+ * A distinct axis from coverageState/freshness: not "what tier of data backs this score"
+ * but "how much do the signals that exist actually agree, and how many independent
+ * people do they come from." A venue can be coverageState=LIVE (a fresh report exists)
+ * while signalHealth is MIXED (that single report hasn't been corroborated, or two
+ * reports disagree) — coverageState alone can't express that distinction. See
+ * lib/pulse/signalHealth.ts.
+ */
+export type SignalHealthState = "LIVE" | "RECENT" | "MIXED" | "EXPECTED" | "INSUFFICIENT";
+
+export interface SignalHealth {
+  state: SignalHealthState;
+  /** Distinct reporters whose report is still inside the LIVE/RECENT freshness window —
+   * not a raw report count, and not affected by one person filing several reports over a
+   * longer night (the DB's own 25-minute cooldown already prevents that within this window). */
+  independentContributors: number;
+  /** Same, restricted to isVerifiedNearby reports. */
+  verifiedContributors: number;
+  agreementScore: number; // 0-1, passthrough of liveReports' weighted-agreement calc
+  sourceDiversityScore: number; // 0-1 — see deriveSignalHealth
+  /** Independent of pulse.confidenceScore/confidenceLabel: this one is additionally
+   * capped by sourceDiversityScore, so a single loud (even if trusted) reporter can't
+   * alone read as HIGH here even where the raw pulse confidence would. Used only by
+   * signal-health-aware UI (the map's verified-live marker treatment, "what's this based
+   * on") — pulse.confidenceLabel elsewhere is unchanged. */
+  confidenceScore: number;
+  confidenceLabel: ConfidenceLabel;
+  freshnessMinutes: number | null;
+}
+
 /** "Should we go there," distinct from pulseScore's "what's happening there" — folds in
  * momentum, wait, distance, and confidence. See lib/pulse/moveScore.ts. */
 export type MoveVerdict = "GOOD_MOVE" | "PEAKING" | "COOLING" | "HIGH_LINE_RISK" | "TOO_EARLY" | "NOT_WORTH_TRIP";
@@ -487,6 +517,7 @@ export interface VenueWithPulse extends Venue {
   /** null unless the venue is LIVE, has DIRECTORY-clearing baseline data, and has
    * enough recent nightly-rollup history to compare against — see lib/pulse/signals/vsTypical.ts. */
   vsTypical: VsTypicalComparison | null;
+  signalHealth: SignalHealth;
   distanceMeters?: number;
   friendsPresent?: PresenceSummary[];
   isSaved?: boolean;

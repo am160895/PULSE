@@ -2,6 +2,7 @@ import type {
   ConfirmedSignal,
   CurrentPulseStatus,
   PulseResult,
+  SignalHealth,
   Venue,
   VenueCoverageState,
   VenueHourlyBaseline,
@@ -28,13 +29,19 @@ import {
 } from "@/lib/data/repository";
 import { allTrustScoresMap, countAnyPresentAtVenue, countPresentAtVenues } from "@/lib/data/social";
 import { calculatePulseScore } from "./calculatePulseScore";
+import { deriveSignalHealth } from "./signalHealth";
 import { calculateVsTypicalSignal } from "./signals/vsTypical";
 import { deriveVenueOpenState } from "@/lib/venues/openState";
 import { deriveCoverageState } from "@/lib/venues/coverageState";
 import { buildEffectiveHours } from "@/lib/venues/specialHours";
 import { getVenueOpenStatus } from "@/lib/venues/getVenueOpenStatus";
 import { currentPulseStatusFor } from "@/lib/venues/currentPulseStatus";
-import { HOURS_DISCREPANCY_WINDOW_MINUTES, NIGHTLIFE_DAY_BOUNDARY_HOUR, ROLLUP_LOOKBACK_NIGHTS } from "@/config/constants";
+import {
+  HOURS_DISCREPANCY_WINDOW_MINUTES,
+  NIGHTLIFE_DAY_BOUNDARY_HOUR,
+  ROLLUP_LOOKBACK_NIGHTS,
+  TRUST_SCORE_DEFAULT,
+} from "@/config/constants";
 import { evaluateOwnReportsForConsensus } from "@/lib/gamification/consensus";
 import { evaluateBadges, type BadgeUnlock } from "@/lib/gamification/badges";
 import { finalizeNightlyRollupsIfNeeded } from "./history/nightlyRollup";
@@ -104,6 +111,7 @@ export interface VenueState {
   /** null unless the venue is currently LIVE with real (non-DIRECTORY) data and enough
    * nightly-rollup history to compare against — see signals/vsTypical.ts. */
   vsTypical: VsTypicalComparison | null;
+  signalHealth: SignalHealth;
 }
 
 /** Never shows a comparison for a venue with no live score to compare (CLOSED/DIRECTORY)
@@ -158,13 +166,22 @@ export async function computeVenueState(venue: Venue, now: Date, viewerId?: stri
   const recentRollups = await listRecentRollupsForVenue(venue.id, now);
   const nightlifeDayOfWeek = nightlifeDayParts(now, venue.timezone, NIGHTLIFE_DAY_BOUNDARY_HOUR).nightlifeDayOfWeek;
   const vsTypical = deriveVsTypical(recentRollups, nightlifeDayOfWeek, currentPulseStatus, coverageState, pulse.pulseScore);
+  const signalHealth = deriveSignalHealth({
+    reports: signals.reports,
+    baselines: signals.baselines as VenueHourlyBaseline[],
+    friendsPresentCount: signals.friendsPresentCount,
+    now,
+    timezone: venue.timezone,
+    trustScores: signals.trustScores,
+    defaultTrust: TRUST_SCORE_DEFAULT,
+  });
 
   const newlyConfirmedSignals = viewerId
     ? await evaluateOwnReportsForConsensus(viewerId, venue, signals.reports, now, pulse.trend)
     : [];
   const newlyUnlockedBadges = newlyConfirmedSignals.length > 0 ? await evaluateBadges(viewerId!, now) : [];
 
-  return { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, vsTypical, newlyConfirmedSignals, newlyUnlockedBadges };
+  return { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, vsTypical, signalHealth, newlyConfirmedSignals, newlyUnlockedBadges };
 }
 
 /**
@@ -229,6 +246,15 @@ export async function computeVenueStatesBatch(venues: Venue[], now: Date, viewer
     const rollups = rollupsByVenue.get(venue.id) ?? [];
     const nightlifeDayOfWeek = nightlifeDayParts(now, venue.timezone, NIGHTLIFE_DAY_BOUNDARY_HOUR).nightlifeDayOfWeek;
     const vsTypical = deriveVsTypical(rollups, nightlifeDayOfWeek, currentPulseStatus, coverageState, pulse.pulseScore);
+    const signalHealth = deriveSignalHealth({
+      reports,
+      baselines,
+      friendsPresentCount,
+      now,
+      timezone: venue.timezone,
+      trustScores,
+      defaultTrust: TRUST_SCORE_DEFAULT,
+    });
 
     const newlyConfirmedSignals = viewerId ? await evaluateOwnReportsForConsensus(viewerId, venue, reports, now, pulse.trend) : [];
     const newlyUnlockedBadges = newlyConfirmedSignals.length > 0 ? await evaluateBadges(viewerId!, now) : [];
@@ -241,6 +267,7 @@ export async function computeVenueStatesBatch(venues: Venue[], now: Date, viewer
       currentPulseStatus,
       hoursDiscrepancy,
       vsTypical,
+      signalHealth,
       newlyConfirmedSignals,
       newlyUnlockedBadges,
     });

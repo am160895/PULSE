@@ -430,6 +430,15 @@ button {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Additive only — every other marker (the common baseline-only case) keeps its normal
+   look. A static accent ring, deliberately not the animated .pulse-ring below (that's
+   reserved for HOT_NOW) and a different color from every marker-state fill, so it never
+   reads as "busy" — only as "this number is backed by multiple people agreeing right
+   now," gated in MapView.tsx on signalHealth's own source-diversity-capped confidence. */
+.venue-marker.verified-live {
+  box-shadow: 0 0 0 2px var(--accent), var(--shadow-soft);
+}
+
 .pulse-ring {
   position: absolute;
   inset: -6px;

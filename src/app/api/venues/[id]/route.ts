@@ -46,8 +46,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   // Score the primary venue and every candidate alternative in one batch — same total
   // round-trip cost whether there are 0 or 10 nearby candidates.
   const states = await computeVenueStatesBatch([venue, ...nearby.map((n) => n.v)], now, session.profile.id);
-  const { pulse, openState, coverageState, openStatus, currentPulseStatus, hoursDiscrepancy, vsTypical, newlyConfirmedSignals, newlyUnlockedBadges } =
-    states.get(venue.id)!;
+  const {
+    pulse,
+    openState,
+    coverageState,
+    openStatus,
+    currentPulseStatus,
+    hoursDiscrepancy,
+    vsTypical,
+    signalHealth,
+    newlyConfirmedSignals,
+    newlyUnlockedBadges,
+  } = states.get(venue.id)!;
 
   const result: VenueWithPulse = {
     ...venue,
@@ -59,6 +69,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     currentPulseStatus,
     hoursDiscrepancy,
     vsTypical,
+    signalHealth,
     isSaved: savedIds.has(venue.id),
     friendsPresent,
   };
@@ -83,6 +94,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         currentPulseStatus: alt.currentPulseStatus,
         hoursDiscrepancy: alt.hoursDiscrepancy,
         vsTypical: alt.vsTypical,
+        signalHealth: alt.signalHealth,
         isSaved: savedIds.has(v.id),
         distanceMeters: distance,
       };

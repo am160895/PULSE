@@ -31,6 +31,7 @@ export async function GET() {
       currentPulseStatus: state.currentPulseStatus,
       hoursDiscrepancy: state.hoursDiscrepancy,
       vsTypical: state.vsTypical,
+      signalHealth: state.signalHealth,
       isSaved: true,
     };
   });

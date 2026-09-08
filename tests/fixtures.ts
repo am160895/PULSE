@@ -98,6 +98,16 @@ export function makeVenueWithPulse(overrides: Partial<VenueWithPulse> = {}): Ven
     currentPulseStatus: "LIVE",
     hoursDiscrepancy: false,
     vsTypical: null,
+    signalHealth: {
+      state: "LIVE",
+      independentContributors: 3,
+      verifiedContributors: 2,
+      agreementScore: 0.9,
+      sourceDiversityScore: 0.8,
+      confidenceScore: 80,
+      confidenceLabel: "HIGH",
+      freshnessMinutes: 5,
+    },
     ...overrides,
   };
 }
