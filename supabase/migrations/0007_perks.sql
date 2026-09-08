@@ -57,4 +57,40 @@ create policy perk_redemptions_self_insert on perk_redemptions for insert
 
 -- ---------------------------------------------------------------------------
 
+-- Analytics — deliberately last and fully self-contained inside one exception-guarded
+-- block, so nothing here can ever block the two sections above (which matter much more).
+-- The first version of this file assumed analytics_event_name (the enum from 0004) already
+-- existed and just needed 'PERK_REDEEMED' added — that failed with a real Postgres error
+-- ("type analytics_event_name does not exist"), meaning 0004's analytics half was never
+-- actually applied either, despite analytics_events looking queryable through the app at
+-- various points (almost certainly a stale PostgREST schema-cache read, not a real table).
+-- This creates whatever's missing (type, then table) and adds the new value — safe to run
+-- no matter which partial state turns out to be true, and analytics is best-effort by its
+-- own design (see lib/data/analytics.ts) — never worth failing this migration over.
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'analytics_event_name') then
+    create type analytics_event_name as enum (
+      'LANDING_VIEW', 'MAP_VIEW', 'VENUE_VIEW', 'SHARED_LINK_OPENED',
+      'AUTH_STARTED', 'AUTH_COMPLETED',
+      'REPORT_STARTED', 'REPORT_COMPLETED', 'IM_HERE_COMPLETED',
+      'VENUE_SHARED', 'VENUE_SAVED', 'DIRECTIONS_CLICKED', 'FRIEND_INVITED'
+    );
+  end if;
+
+  if not exists (select 1 from information_schema.tables where table_name = 'analytics_events') then
+    create table analytics_events (
+      id uuid primary key default uuid_generate_v4(),
+      event analytics_event_name not null,
+      profile_id uuid references profiles (id) on delete set null,
+      venue_id uuid references venues (id) on delete set null,
+      created_at timestamptz not null default now()
+    );
+    create index analytics_events_event_created_idx on analytics_events (event, created_at desc);
+    alter table analytics_events enable row level security;
+  end if;
+exception when others then
+  raise notice 'Analytics setup skipped (non-fatal): %', sqlerrm;
+end $$;
+
 alter type analytics_event_name add value if not exists 'PERK_REDEEMED';
